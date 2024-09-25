@@ -1,0 +1,51 @@
+name: masjed
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  shared_preferences: ^2.3.1
+  provider: ^6.1.2
+  flutter_localizations:
+    sdk: flutter
+  intl: any
+  image_field: ^0.0.10
+  image_picker: ^1.1.2
+  path_provider: ^2.1.4
+  dio: ^5.7.0
+  jwt_decoder: ^2.0.1
+  crypto: ^3.0.5
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - images/icon.png
+    - images/green_pattern.png
+    - images/avatar.png
+    - images/quran.png
+    - images/hadith.png
+    - images/activity.png
+    - images/quran_book.png
+    - images/hadith_book.png
+    - images/checklist.png
+    - images/penalty.png
+    - images/ranks.jpg
+
+
+  fonts:
+    - family: Noto Sans Arabic
+      fonts:
+        - asset: fonts/Noto-Sans-Arabic.ttf
