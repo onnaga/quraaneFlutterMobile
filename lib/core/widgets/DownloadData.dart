@@ -1,15 +1,20 @@
-
-
 import 'package:flutter/material.dart';
+import 'package:masjed/core/utils/my_download_icon.dart';
 import 'package:masjed/core/utils/sizeConfig.dart';
+import 'package:masjed/core/widgets/modern_loader.dart';
 import 'package:masjed/state/profile.dart';
 
 class DownloaddataBTN extends StatefulWidget {
-  void Function(Profile profile) submit;
-  bool logging;
-Profile profile ;
+  final void Function(Profile profile) submit;
+  final bool logging;
+  final Profile profile;
 
-  DownloaddataBTN({required this.submit,required this.logging ,required this.profile });
+  const DownloaddataBTN({
+    super.key,
+    required this.submit,
+    required this.logging,
+    required this.profile,
+  });
 
   @override
   State<DownloaddataBTN> createState() => _DownloaddataBTNState();
@@ -18,20 +23,23 @@ Profile profile ;
 class _DownloaddataBTNState extends State<DownloaddataBTN> {
   @override
   Widget build(BuildContext context) {
-    return  GestureDetector(
-                              
-                        onTap:(){
-                          widget.submit(widget.profile);
-                        },
-            child: (widget.logging) ?                          
-                           Icon(Icons.download_for_offline_outlined,color: const Color.fromARGB(255, 0, 0, 0),size: 50,)
-                :
-           SizedBox(
-              width: sizeConfig.defaultSize!*3.5,
-              height: sizeConfig.defaultSize!*3.5,
-              child:const CircularProgressIndicator(color: Color.fromARGB(255, 0, 0, 0),strokeWidth: 2,),
-            )
-        );
-    
+    // sizeConfig().init(context); // تأكد من استدعاء هذا في مكان مناسب
+    return GestureDetector(
+      onTap: () {
+        // منع الضغط المتكرر أثناء التحميل
+        if (!widget.logging) {
+          widget.submit(widget.profile);
+        }
+      },
+      child: Container(
+        // استخدام Container لتوحيد الحجم في الحالتين
+        width: sizeConfig.defaultSize! * 6,
+        height: sizeConfig.defaultSize! * 5,
+        alignment: Alignment.center,
+        child: widget.logging
+            ? const ModernLoader(size: 25) // ✅ الصحيح: عرض اللودر عندما تكون logging = true
+            : const GradientDownloadIcon(size: 50), // ✅ الصحيح: عرض الأيقونة عندما تكون logging = false
+      ),
+    );
   }
 }

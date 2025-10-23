@@ -1,9 +1,14 @@
-import 'dart:developer';
+// ✅ تم تعديل هذا الملف بالكامل ليعتمد على OfflineSyncService
+
+import 'package:masjed/providers/connectivity_provider.dart';
+import 'package:masjed/state/offline.dart'; // ✅ استيراد الملف الجديد
+import 'package:workmanager/workmanager.dart'; // ✅ استيراد WorkManager
 
 import 'package:flutter/material.dart';
+import 'package:masjed/core/utils/snackBarHelper.dart';
+import 'package:masjed/core/widgets/modern_loader.dart';
 import 'package:masjed/core/widgets/submitFormButton.dart';
-import 'package:masjed/data/objects.dart';
-import 'package:masjed/screens/admin_screens/ManagmentScreens/AddAdminsScreen.dart';
+import 'package:masjed/models/objects.dart';
 import 'package:masjed/screens/admin_screens/latestScreens/latestquraan/AddHomework.dart';
 import 'package:masjed/screens/admin_screens/latestScreens/latestquraan/AddSora.dart';
 import 'package:masjed/state/user.dart';
@@ -18,227 +23,310 @@ class Latestquraan extends StatefulWidget {
 }
 
 class _LatestquraanState extends State<Latestquraan> {
-  int NumberOfSora = 1;
-  int NumberOfHomeworks = 1;
-  var sura = AddSora();
-  var homework = AddHomework();
-  GlobalKey<FormState> formKey = GlobalKey<FormState>();
+  var theSoarToSendToProfile = <endedSurahToSend>[];
+  var theHomewroksToSendToProfile = <homeworkSurahToSend>[];
+  bool _isLoading = false;
+  
+  var _soraFormKeys = <GlobalKey<FormState>>[];
+  var _homeworkFormKeys = <GlobalKey<FormState>>[];
+
+  final OfflineSyncService offlineService = OfflineSyncService();
+
   @override
   void initState() {
-    int NumberOfSora = 1;
-    int NumberOfHomeworks = 1;
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeAndSync();
+    });
   }
 
-  List<endedSurahToSend> theSoarToSendToProfile = [];
+  Future<void> _initializeAndSync() async {
+    final isOnline = context.read<ConnectivityProvider>().isOnline;
+    if (isOnline) {
+      final user = context.read<User>();
+      final success = await offlineService.sendPendingQuranSubmissions(user);
+      if (success) {
+        if (mounted) showStyledSnackBar(context, message: 'تمت مزامنة البيانات المحفوظة بنجاح');
+      } else {
+        if (mounted) showStyledSnackBar(context, message: 'فشل مزامنة بعض البيانات', isError: true);
+      }
+    }
+  }
 
-  List<homeworkSurahToSend> theHomewroksToSendToProfile = [];
+  void _addSora() {
+    setState(() {
+      theSoarToSendToProfile.add(
+        // ✅ سيتم إنشاء الكائن مع القيمة الافتراضية 'ghaiban'
+        endedSurahToSend(num: 0, from: 0, to: 0, mark: 0, point: 0),
+      );
+      _soraFormKeys.add(GlobalKey<FormState>());
+    });
+  }
+
+  void _removeSora() {
+    setState(() {
+      if (theSoarToSendToProfile.isNotEmpty) {
+        theSoarToSendToProfile.removeLast();
+        _soraFormKeys.removeLast();
+      }
+    });
+  }
+
+  void _addHomework() {
+    setState(() {
+      theHomewroksToSendToProfile.add(
+        // ✅ سيتم إنشاء الكائن مع القيمة الافتراضية 'ghaiban'
+        homeworkSurahToSend(num: 0, from: 0, to: 0),
+      );
+      _homeworkFormKeys.add(GlobalKey<FormState>());
+    });
+  }
+
+  void _removeHomework() {
+    setState(() {
+      if (theHomewroksToSendToProfile.isNotEmpty) {
+        theHomewroksToSendToProfile.removeLast();
+        _homeworkFormKeys.removeLast();
+      }
+    });
+  }
+
+  void _resetState() {
+    setState(() {
+      theSoarToSendToProfile = [];
+      theHomewroksToSendToProfile = [];
+      _soraFormKeys = [];
+      _homeworkFormKeys = [];
+    });
+  }
+
+  Future<void> submit() async {
+    if (theSoarToSendToProfile.isEmpty && theHomewroksToSendToProfile.isEmpty) {
+      showStyledSnackBar(context, message: 'لا توجد بيانات للإرسال', isError: true);
+      return;
+    }
+
+    bool allValid = true;
+    for (var key in _soraFormKeys) {
+      if (!(key.currentState?.validate() ?? false)) allValid = false;
+    }
+    for (var key in _homeworkFormKeys) {
+      if (!(key.currentState?.validate() ?? false)) allValid = false;
+    }
+
+    if (!allValid) {
+      showStyledSnackBar(context, message: 'الرجاء ملء جميع الحقول المطلوبة', isError: true);
+      return;
+    }
+
+    setState(() { _isLoading = true; });
+
+    for (var soraCard in theSoarToSendToProfile) {
+      soraCard.dispatch(context);
+    }
+    for (var hwCard in theHomewroksToSendToProfile) {
+      hwCard.dispatch(context);
+    }
+    
+    User user = Provider.of<User>(context, listen: false);
+    // ✅ دالة toJson الآن ستضيف حقل 'type' تلقائياً
+    List<Map<String, dynamic>> soarJson = theSoarToSendToProfile.map((e) => e.toJson()).toList();
+    List<Map<String, dynamic>> homeworkJson = theHomewroksToSendToProfile.map((e) => e.toJson()).toList();
+    final payload = [soarJson, homeworkJson];
+
+    final isOnline = context.read<ConnectivityProvider>().isOnline;
+
+    if (isOnline) {
+      try {
+        bool success = await user.add_latest_quraan_hadith(widget.userId, payload, true);
+        if (!context.mounted) return;
+        if (success) {
+          showStyledSnackBar(context, message: 'تم إضافة البيانات بنجاح', isError: false);
+          _resetState();
+        }
+      } catch (e) {
+        if (!context.mounted) return;
+        showStyledSnackBar(context, message: e.toString(), isError: true);
+      }
+    } else {
+      final submission = { 'userId': widget.userId, 'payload': payload, 'type': 'quran' };
+      try {
+        await offlineService.saveQuranSubmissionToCache(submission);
+        Workmanager().registerOneOffTask(
+          "quranSyncTask-${DateTime.now().millisecondsSinceEpoch}",
+          "syncAllPendingData",
+          constraints: Constraints(networkType: NetworkType.connected),
+        );
+        if (mounted) {
+          showStyledSnackBar(context, message: 'تم الحفظ محلياً، سيتم الإرسال عند توفر الإنترنت');
+          _resetState();
+        }
+      } catch (e) {
+         if (mounted) showStyledSnackBar(context, message: 'فشل حفظ البيانات محلياً', isError: true);
+      }
+    }
+    
+    if(mounted) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  // ✅ تم تعديل هذه الدالة لتشمل زر التبديل
+  Widget _buildSection<T>({
+    required String title,
+    required List<T> items,
+    required List<GlobalKey<FormState>> formKeys,
+    required Widget Function(T item, int index, GlobalKey<FormState> formKey) buildCard,
+    required VoidCallback onAdd,
+    required VoidCallback onRemove,
+    required IconData sectionIcon,
+    required List<Color> gradientColors,
+  }) {
+    final theme = Theme.of(context);
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: gradientColors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: gradientColors.last.withOpacity(0.4),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(sectionIcon, color: Colors.white, size: 26),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 24, thickness: 1, color: Colors.white70, indent: 30, endIndent: 30),
+            
+            // ✅ تعديل هنا لعرض البطاقة مع زر التبديل
+            ...items.asMap().entries.map((entry) {
+              final index = entry.key;
+              final item = entry.value;
+              
+              if (index < formKeys.length) {
+                // استخراج النوع الحالي من الكائن
+                String currentType = 'ghaiban'; // قيمة افتراضية
+                if (item is endedSurahToSend) {
+                  currentType = item.type;
+                } else if (item is homeworkSurahToSend) {
+                  currentType = item.type;
+                }
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Column(
+                    children: [
+                      buildCard(item, index, formKeys[index]),
+                      const SizedBox(height: 10),
+                      // ✅ زر التبديل الجديد
+                      ToggleButtons(
+                        isSelected: [currentType == 'ghaiban', currentType == 'nazaran'],
+                        onPressed: (int newIndex) {
+                          setState(() {
+                            final newType = newIndex == 0 ? 'ghaiban' : 'nazaran';
+                            if (item is endedSurahToSend) {
+                              item.type = newType;
+                            } else if (item is homeworkSurahToSend) {
+                              item.type = newType;
+                            }
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(10),
+                        selectedColor: Colors.white,
+                        color: Colors.white.withOpacity(0.7),
+                        fillColor: Colors.white.withOpacity(0.3),
+                        splashColor: Colors.white.withOpacity(0.2),
+                        children: const [
+                          Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('غيباً')),
+                          Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('نظراً')),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            }),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                IconButton(onPressed: onAdd, icon: const Icon(Icons.add_circle, size: 32), color: Colors.white),
+                IconButton(onPressed: onRemove, icon: const Icon(Icons.remove_circle, size: 32), color: Colors.white70),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        NotificationListener<endedSurahToSend>(
-          onNotification: (endedSurahToSend notification) {
-            print(notification.toJson().toString());
-
-            theSoarToSendToProfile.add(notification);
-            'You have pressed button ${notification} times.';
-
-            return true;
-          },
-          child: Expanded(
-            child: ListView.builder(
-              itemCount: NumberOfSora,
-              itemBuilder: (context, index) {
-                //when the element is the last element in the list
-                if (NumberOfSora - index == 1) {
-                  sura = AddSora();
-                  return Column(
-                    children: [
-                      const SizedBox(
-                        height: 15,
-                      ),
-                      Text(
-                        'البيانات الموجودة في هذا الحقل لن تضاف',
-                        style: TextStyle(
-                            color: Colors.redAccent,
-                            fontWeight: FontWeight.bold),
-                      ),
-                      sura,
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          IconButton(
-                            onPressed: () {
-                              setState(() {
-                                if (sura.submit(context)) {
-                                  theSoarToSendToProfile;
-                                  NumberOfSora++;
-                                }
-
-                              });
-                            },
-                            icon: Icon(Icons.add_circle_rounded),
-                          ),
-                          IconButton(
-                            onPressed: () {
-                              setState(() {
-                                if ( NumberOfSora == 1) {
-                                  NumberOfSora;
-                                    theSoarToSendToProfile;
-                                }else{
- NumberOfSora--;
-   theSoarToSendToProfile.removeLast();
-                                }
-                               
-                            
-                              
-                              });
-                            },
-                            icon: Icon(Icons.minimize_rounded),
-                          ),
-                        ],
-                      ),
-                    ],
-                  );
-                }
-                //when the element is not the last element
-                else {
-                  if (theSoarToSendToProfile.length - 1 < index) {
-                    return SizedBox();
-                  }
-
-                  return AddSora.completedForm(
-                      sorahForForm: theSoarToSendToProfile[index]);
-                }
-              },
+        Expanded(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Column(
+                children: [
+                  _buildSection<endedSurahToSend>(
+                    title: "تسميعات القرآن",
+                    items: theSoarToSendToProfile,
+                    formKeys: _soraFormKeys,
+                    buildCard: (item, index, formKey) => AddSora(sorahForForm: item, formKey: formKey),
+                    onAdd: _addSora,
+                    onRemove: _removeSora,
+                    sectionIcon: Icons.menu_book_outlined,
+                    gradientColors: [Colors.green.shade400, const Color.fromARGB(255, 88, 174, 165)],
+                  ),
+                  _buildSection<homeworkSurahToSend>(
+                    title: "وظائف القرآن",
+                    items: theHomewroksToSendToProfile,
+                    formKeys: _homeworkFormKeys,
+                    buildCard: (item, index, formKey) => AddHomework(homeworkForForm: item, formKey: formKey),
+                    onAdd: _addHomework,
+                    onRemove: _removeHomework,
+                    sectionIcon: Icons.assignment_outlined,
+                    gradientColors: [Colors.blue.shade400, const Color.fromARGB(255, 144, 152, 201)],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-        NotificationListener<homeworkSurahToSend>(
-          onNotification: (homeworkSurahToSend notification) {
-            print(notification.toJson().toString());
-
-            theHomewroksToSendToProfile.add(notification);
-
-            return true;
-          },
-          child: Expanded(
-            child: ListView.builder(
-              itemCount: NumberOfHomeworks,
-              itemBuilder: (context, index) {
-                //when the element is the last element in the list
-                if (NumberOfHomeworks - index == 1) {
-                  homework = AddHomework();
-                  return Column(
-                    children: [
-                      SizedBox(
-                        height: 15,
-                      ),
-                      Text(
-                        'البيانات الموجودة في هذا الحقل لن تضاف',
-                        style: TextStyle(
-                            color: Colors.redAccent,
-                            fontWeight: FontWeight.bold),
-                      ),
-                      homework,
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          IconButton(
-                            onPressed: () {
-                              setState(() {
-                                if (homework.submit(context)) {
-                                  theHomewroksToSendToProfile;
-                                  NumberOfHomeworks++;
-                                }
-                              });
-                            },
-                            icon: Icon(Icons.add_circle_rounded),
-                          ),
-                          submitFormButton(submit: submit),
-                          IconButton(
-                            onPressed: () {
-                              setState(() {
-                                if (NumberOfHomeworks == 1){
-                                   NumberOfHomeworks;
-                                }else{
- NumberOfHomeworks--;
-  theHomewroksToSendToProfile.removeLast();
-                                }
-
-                               
-                              });
-                            },
-                            icon: Icon(Icons.minimize_rounded),
-                          ),
-                        ],
-                      ),
-                    ],
-                  );
-                }
-                //when the element is not the last element
-                else {
-                  return AddHomework.completedForm(
-                      homeworkForForm: theHomewroksToSendToProfile[index]);
-                }
-              },
-            ),
-          ),
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: _isLoading
+              ? const ModernLoader(size: 20,)
+              : SubmitFormButton(submit: submit),
         ),
       ],
     );
-  }
-
-  void submit() {
-
-    User user = Provider.of<User>(context, listen: false);
- 
-////////////////////the inner data is not in json ////////////////////////
-  //  List<Map<String, dynamic>> firstArray = [];
-  //   List<Map<String, dynamic>> secondArray = [];
-
-    // theHomewroksToSendToProfile.forEach((item) {
-    //   secondArray.add(item.toJson());
-    // });
-
-    // theSoarToSendToProfile.forEach((item) {
-    //   firstArray.add(item.toJson());
-    // });
-
-    print(widget.userId);
-    print('/////////////////////////////////////////////////////////////////');
-    print([theSoarToSendToProfile, theHomewroksToSendToProfile]);
-    user.add_latest_quraan_hadith(
-        context, widget.userId, [theSoarToSendToProfile, theHomewroksToSendToProfile],true).then((auth) {
-      if (auth) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            duration: Duration(milliseconds: 1500),
-            closeIconColor: Colors.white,
-            showCloseIcon: true,
-            backgroundColor: Colors.green,
-            content: Text(
-              ' تم إضافة البيانات',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            duration: Duration(milliseconds: 1500),
-            closeIconColor: Colors.white,
-            showCloseIcon: true,
-            backgroundColor: Colors.redAccent,
-            content: Text(
-              'توجد مشكلة في الإضافة',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        );
-      }
-      return auth;
-    });
   }
 }

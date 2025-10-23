@@ -1,17 +1,18 @@
-import 'dart:developer';
 
 import 'package:flutter/material.dart';
 
 class UserNotifications extends StatelessWidget {
    final firstScrollController = ScrollController();
    final secondScrollController = ScrollController();
+
+  UserNotifications({super.key});
   @override
   Widget build(BuildContext context) {
     return Container(
       color: Colors.grey[100],
       child: ListView(
         controller: secondScrollController,
-        children: [
+        children: const [
           Notification(),
         ],
       ),
@@ -22,11 +23,13 @@ class UserNotifications extends StatelessWidget {
 
 
 class Notification extends StatelessWidget {
+  const Notification({super.key});
+
 
   @override
   Widget build(BuildContext context) {
     
-    return SizedBox(
+    return const SizedBox(
       height: 140,
       child: Card(
           margin: EdgeInsets.only(bottom: 7 , left: 12 , right: 5),

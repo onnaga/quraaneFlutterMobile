@@ -6,6 +6,8 @@ class App extends StatelessWidget {
   PageController controller = PageController(initialPage:0,keepPage: true);
   GlobalKey<NavigationState> nav_state = GlobalKey<NavigationState>();
 
+  App({super.key});
+
 
   @override
   Widget build(BuildContext context) {
@@ -19,16 +21,16 @@ class App extends StatelessWidget {
         showDialog(
             context: context,
             barrierDismissible: true,
-            builder: (context) => ExitAlert()
+            builder: (context) => const ExitAlert()
         );
       },
       child: Scaffold(
         body: PageView(
-          physics: NeverScrollableScrollPhysics(),
+          physics: const NeverScrollableScrollPhysics(),
           onPageChanged: (int i){nav_state.currentState?.update(i);},
           controller: controller,
           scrollDirection: Axis.horizontal,
-          children: [
+          children: const [
 
           ],
         ),
@@ -73,6 +75,8 @@ class NavigationState extends State<Navigation> {
 
 
 class ExitAlert extends StatelessWidget {
+  const ExitAlert({super.key});
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(

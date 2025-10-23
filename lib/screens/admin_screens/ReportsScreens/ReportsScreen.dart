@@ -1,9 +1,6 @@
-
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
+import 'package:masjed/core/utils/snackBarHelper.dart';
 import 'package:masjed/core/widgets/DownloadData.dart';
-import 'package:masjed/screens/admin_screens/ManagmentScreens/teacherCard.dart';
 import 'package:masjed/screens/admin_screens/ReportsScreens/UsersList.dart';
 import 'package:masjed/state/profile.dart';
 import 'package:masjed/state/user.dart';
@@ -11,98 +8,95 @@ import 'package:provider/provider.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
+
   @override
   State<ReportsScreen> createState() => _ReportsScreenState();
 }
+
 class _ReportsScreenState extends State<ReportsScreen> {
-   bool logging =true;
-  
-   final firstScrollController = ScrollController();
-   List<dynamic> DataFromApi = [];
+  bool logging = false;
+  final ScrollController firstScrollController = ScrollController();
+  List<dynamic> dataFromApi = [];
+
   @override
-  
   Widget build(BuildContext context) {
-     User user = Provider.of<User>(context);
-  return Consumer<Profile>(builder: (context, profile, child) {
-    return Stack(
+    final user = Provider.of<User>(context, listen: false);
+
+    return Consumer<Profile>(
+      builder: (context, profile, child) {
+        // ✅ 1. استبدال Stack بـ Column لتجنب تداخل العناصر
+        return Column(
           children: [
-  
-                        
-    ListView.builder(
-      
-      controller: firstScrollController,
-      itemCount: DataFromApi.length,
-      itemBuilder: (context, index) {
-        return (DataFromApi[index]['user_id']==user.id ||DataFromApi[index]['teacher_id']==user.username )?
-        ///////////////////////////if///////////////////////
-         Container(
-        decoration: const BoxDecoration(
-          color: Color.fromARGB(255, 180, 227, 139),
-          boxShadow: [
-            BoxShadow(color: Colors.green, spreadRadius: 0.1),
+            // ✅ 2. استخدام Expanded لجعل القائمة تملأ المساحة المتاحة
+            Expanded(
+              child: ListView.builder(
+                controller: firstScrollController,
+                itemCount: dataFromApi.length,
+                // إضافة padding للقائمة لتجنب الالتصاق بالحواف
+                padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
+                itemBuilder: (context, index) {
+                  final report = dataFromApi[index];
+                  // لم نعد بحاجة لمتغير isHighlighted هنا لأن التصميم انتقل للـ Card
+                  
+                  // ✅ 3. إزالة Container ذو الارتفاع الثابت
+                  // يتم الآن عرض الـ Card مباشرة
+                  return usersList(
+                    reportForUser: report,
+                    user_id_from_api: report['user_id'],
+                  );
+                },
+              ),
+            ),
+            // ✅ 4. وضع زر التحميل مباشرة بعد القائمة
+            // لم نعد بحاجة لـ Align
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'تحديث البيانات',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                DownloaddataBTN(
+                  submit: downloadData,
+                  logging: logging,
+                  profile: profile,
+                ),
+                // إضافة مساحة سفلية آمنة لتجنب تداخل الزر مع عناصر النظام
+                SizedBox(height: MediaQuery.of(context).padding.bottom + 10),
+              ],
+            ),
           ],
-        ),
-          height:70,
-          child: usersList(
-            reportForUser: DataFromApi[index],
-            user_id_from_api:  DataFromApi[index]['user_id']
-          ),
-        ):
-        ////////////////////////////else/////////////////////
-         Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(color: Colors.green, spreadRadius: 0.1),
-          ],
-        ),
-          height:70,
-          child: usersList(
-            reportForUser: DataFromApi[index],
-            user_id_from_api: DataFromApi[index]['user_id'],
-          ),
         );
-      
       },
-    ),
-          
-                       Column(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              const Text('تحميل البيانات',style: TextStyle(fontWeight: FontWeight.bold),),
-                              DownloaddataBTN(submit: downloadData, logging: logging, profile: profile),
+    );
+  }
 
-                              
- 
-                        SizedBox(height: 10,),
-                        ],
-                          ),
+  // قمت بتبسيط هذه الدالة أيضًا باستخدام async/await بشكل أفضل
+Future<void> downloadData(Profile profile) async {
+  if (!mounted) return;
+  setState(() => logging = true); // يعني أن التحميل بدأ
+
+  try {
+    // استدعاء الدالة والحصول على البيانات مباشرة
+    final List<dynamic> reports = await profile.show_reports();
     
-          ],
-        );},);
-        }
+    if (!mounted) return;
 
-
-   downloadData(profile)async {
     setState(() {
-      logging = false;
+      dataFromApi = reports;
     });
-                          await profile.show_reports(context).then((then) {
-                            if (then) {
-                             setState(() {
-                              if(profile.ReportsList!=null){DataFromApi = profile.ReportsList!;}
-                              else{DataFromApi =[];}
-                              print("object");
-                             });
-                            }
-                          logging = true ; 
-                          }
-                          
-                          ,);
-                            
-                          
-                         
-                        }
 
+  } catch (e) {
+    if (!mounted) return;
+    showStyledSnackBar(context, message: e.toString(), isError: true);
+    setState(() {
+      dataFromApi = []; // إفراغ القائمة عند حدوث خطأ
+    });
+  } finally {
+    if (mounted) {
+      setState(() => logging = false); // يعني أن التحميل انتهى
+    }
+  }
+}
 
 }

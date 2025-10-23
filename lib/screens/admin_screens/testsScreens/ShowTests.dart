@@ -1,13 +1,12 @@
 
-import 'dart:developer';
 
 import 'package:flutter/material.dart';
+import 'package:masjed/core/utils/snackBarHelper.dart';
 import 'package:masjed/core/widgets/DownloadData.dart';
-import 'package:masjed/data/objects.dart';
-import 'package:masjed/screens/admin_screens/ManagmentScreens/teacherCard.dart';
+import 'package:masjed/models/objects.dart';
 import 'package:masjed/screens/admin_screens/testsScreens/TestCard.dart';
+import 'package:masjed/state/daoraState.dart';
 import 'package:masjed/state/profile.dart';
-import 'package:masjed/state/user.dart';
 import 'package:provider/provider.dart';
 
 class Showtests extends StatefulWidget {
@@ -19,7 +18,7 @@ class Showtests extends StatefulWidget {
 }
 
 class _ShowtestsState extends State<Showtests> {
-  bool logging = true ; 
+  bool logging = false ; 
      List<TestData> DataFromApi = [
   ];
   final firstScrollController = ScrollController();
@@ -49,12 +48,12 @@ class _ShowtestsState extends State<Showtests> {
                        Column(
                         mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              const Text('تحميل البيانات',style: TextStyle(fontWeight: FontWeight.bold),),
+                              const Text(' تحديث البيانات ',style: TextStyle(fontWeight: FontWeight.bold),),
                               
                               DownloaddataBTN(submit: downloadData, logging: logging, profile: profile),
                               
     
-                        SizedBox(height: 10,),
+                        const SizedBox(height: 10,),
                         ],
                           ),
     
@@ -62,24 +61,37 @@ class _ShowtestsState extends State<Showtests> {
         );},);
         }
 
+Future<void> downloadData(Profile profile) async {
+  setState(() {
+    logging = true; // يعني أن التحميل بدأ
+  });
 
-   downloadData(profile)async {
+  try {
+    // جلب daoraId من Provider آخر قبل استدعاء الدالة
+    final int daoraId = Provider.of<Daorastate>(context, listen: false).currentDaoraId!;
+    
+    final List<TestData> fetchedTests = await profile.get_tests(daoraId);
+
+    if (!mounted) return;
+
     setState(() {
-      logging = false ; 
+      DataFromApi = fetchedTests;
     });
-                          await profile.get_tests(context).then((then) {
-                            if (then) {
-                             setState(() {
 
-                              if(profile.TestsList !=null){DataFromApi = profile.TestsList!;}
-                              else{DataFromApi =[];}
-                              print("object");
-                             });
-                            }
-                            logging=true ;
-                          },);
-                            
-                          
-                         
-                        }
+  } catch (e) {
+    if (!mounted) return;
+    showStyledSnackBar(context, message: e.toString(), isError: true);
+    setState(() {
+      DataFromApi = []; // إفراغ البيانات في حالة الخطأ
+    });
+  } finally {
+    // هذا الكود سيعمل دائماً في النهاية
+    if (mounted) {
+      setState(() {
+        logging = false; // يعني أن التحميل انتهى
+      });
+    }
+  }
+}
+
 }

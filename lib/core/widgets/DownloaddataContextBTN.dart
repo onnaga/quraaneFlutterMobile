@@ -1,38 +1,45 @@
-
-
 import 'package:flutter/material.dart';
+import 'package:masjed/core/utils/my_download_icon.dart';
 import 'package:masjed/core/utils/sizeConfig.dart';
+import 'package:masjed/core/widgets/modern_loader.dart';
 import 'package:masjed/state/profile.dart';
 
 class DownloaddataContextBTN extends StatefulWidget {
-  void Function( BuildContext sendedcontext , Profile profile) submit;
-  bool logging;
-Profile profile ;
-BuildContext sendedcontext ; 
+  final void Function(BuildContext sendedContext, Profile profile) submit;
+  final bool logging;
+  final Profile profile;
+  final BuildContext sendedContext;
 
-  DownloaddataContextBTN({required this.submit,required this.logging ,required this.profile ,required this.sendedcontext});
+  const DownloaddataContextBTN({
+    super.key,
+    required this.submit,
+    required this.logging,
+    required this.profile,
+    required this.sendedContext,
+  });
 
   @override
-  State<DownloaddataContextBTN> createState() => _DownloaddataBTNState();
+  State<DownloaddataContextBTN> createState() => _DownloaddataContextBTNState();
 }
 
-class _DownloaddataBTNState extends State<DownloaddataContextBTN> {
+class _DownloaddataContextBTNState extends State<DownloaddataContextBTN> {
   @override
   Widget build(BuildContext context) {
-    return  GestureDetector(
-                              
-                        onTap:(){
-                          widget.submit(widget.sendedcontext,widget.profile);
-                        },
-            child: (widget.logging) ?                          
-                           Icon(Icons.download_for_offline_outlined,color: const Color.fromARGB(255, 0, 0, 0),size: 50,)
-                :
-           SizedBox(
-              width: sizeConfig.defaultSize!*3.5,
-              height: sizeConfig.defaultSize!*3.5,
-              child:const CircularProgressIndicator(color: Color.fromARGB(255, 0, 0, 0),strokeWidth: 2,),
-            )
-        );
-    
+    return GestureDetector(
+      onTap: () {
+        // منع الضغط المتكرر أثناء التحميل
+        if (!widget.logging) {
+          widget.submit(widget.sendedContext, widget.profile);
+        }
+      },
+      child: Container(
+        width: sizeConfig.defaultSize! * 6,
+        height: sizeConfig.defaultSize! * 5,
+        alignment: Alignment.center,
+        child: widget.logging
+            ? const ModernLoader(size: 25) // ✅ عرض اللودر أثناء التحميل
+            : const GradientDownloadIcon(size: 45), // ✅ عرض الأيقونة إذا ما في تحميل
+      ),
+    );
   }
 }

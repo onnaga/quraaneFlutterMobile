@@ -1,374 +1,292 @@
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:masjed/core/utils/QuraansoarManage.dart';
-import 'package:masjed/data/objects.dart';
+import 'package:masjed/core/utils/sizeConfig.dart'; // ✅ استيراد sizeConfig
+import 'package:masjed/models/objects.dart';
 
-class AddHadith extends StatelessWidget {
-  final TextEditingController menuController = TextEditingController();
-  final GlobalKey<FormState> formKey = GlobalKey<FormState>();
+class AddHadith extends StatefulWidget {
+  final endedSurahToSend? hadithForForm;
+  final GlobalKey<FormState> formKey; // ✅ تم تعديل النوع
+  const AddHadith({super.key, this.hadithForForm, required this.formKey});
 
-  
-  String hadithNum = '';
-  String from = '';
-  String to = '';
-  String mark = '';
-  String points = '';
-  endedSurahToSend? hadithForForm;
-  static List<int> menuHadithItems = Quraansoarmanage.AhadithNumber;
-  AddHadith({
-    super.key,
-  });
-  AddHadith.completedForm({required this.hadithForForm});
-  String? all_validator(String? value) {
-    if (value == '') {
-      return 'هذا الحقل مطلوب';
+  @override
+  State<AddHadith> createState() => _AddHadithState();
+}
+
+class _AddHadithState extends State<AddHadith> {
+  // ❌ late TextEditingController fromController;
+  // ❌ late TextEditingController toController;
+  late TextEditingController markController;
+  late TextEditingController pointController;
+
+  // ✅ استخدام عناوين الأحاديث لسهولة البحث والاختيار
+  final TextEditingController hadithController = TextEditingController();
+  String hadithValue = Quraansoarmanage.AhadithTitles.first;
+
+  // ✅ متغير لتتبع حالة حقل النقاط
+  bool _isPointFieldEnabled = true;
+
+  void _updateModel() {
+    if (widget.hadithForForm == null) return;
+    // ✅ num الآن هو فهرس الحديث في قائمة العناوين
+    widget.hadithForForm!.num = Quraansoarmanage.AhadithTitles.indexOf(hadithValue);
+    widget.hadithForForm!.from = 0; // ✅ قيمة ثابتة
+    widget.hadithForForm!.to = 0;   // ✅ قيمة ثابتة
+    widget.hadithForForm!.mark = int.tryParse(markController.text) ?? 0;
+    widget.hadithForForm!.point = int.tryParse(pointController.text) ?? 0;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final initialHadith = widget.hadithForForm;
+
+    // ❌ fromController = ...
+    // ❌ toController = ...
+    markController = TextEditingController(
+        text: initialHadith?.mark == 0 ? '' : initialHadith?.mark.toString());
+    pointController = TextEditingController(
+        text: initialHadith?.point == 0 ? '' : initialHadith?.point.toString());
+
+    // ✅ تحديث منطق القيمة الأولية ليتناسب مع الفهرس والعناوين
+    hadithValue = (initialHadith != null &&
+            initialHadith.num >= 0 &&
+            initialHadith.num < Quraansoarmanage.AhadithTitles.length)
+        ? Quraansoarmanage.AhadithTitles[initialHadith.num]
+        : Quraansoarmanage.AhadithTitles.first;
+        
+    hadithController.text = hadithValue;
+
+    // ❌ fromController.addListener(_updateModel);
+    // ❌ toController.addListener(_updateModel);
+    
+    // ✅ ربط مستمع التقييم
+    markController.addListener(_onMarkChanged);
+    pointController.addListener(_updateModel);
+    
+    // ✅ ضبط الحالة الأولية لحقل النقاط
+    _updatePointsFieldState();
+  }
+
+  @override
+  void dispose() {
+    // ❌ fromController.removeListener(_updateModel);
+    // ❌ toController.removeListener(_updateModel);
+    markController.removeListener(_onMarkChanged);
+    pointController.removeListener(_updateModel);
+
+    // ❌ fromController.dispose();
+    // ❌ toController.dispose();
+    markController.dispose();
+    pointController.dispose();
+    hadithController.dispose();
+    super.dispose();
+  }
+
+  // ✅ دوال التقييم والنقاط
+  void _onMarkChanged() {
+    _updatePointsFieldState();
+    _updateModel(); // تأكد من تحديث النموذج
+  }
+
+  void _updatePointsFieldState() {
+    final mark = int.tryParse(markController.text) ?? 0;
+    bool shouldBeEnabled = true;
+
+    if (mark < 80) {
+      pointController.text = '0'; // تصفير النقاط
+      shouldBeEnabled = false; // تعطيل الحقل
     }
+
+    if (shouldBeEnabled != _isPointFieldEnabled) {
+      setState(() {
+        _isPointFieldEnabled = shouldBeEnabled;
+      });
+    }
+  }
+
+  // ✅ دوال التحقق
+  String? _requiredValidator(String? v) {
+    if (v == null || v.isEmpty) return "هذا الحقل مطلوب";
     return null;
   }
+
+  String? _markValidator(String? v) {
+    if (v == null || v.isEmpty) return "هذا الحقل مطلوب";
+    final mark = int.tryParse(v);
+    if (mark == null) return "رقم غير صالح";
+    if (mark > 100) return "لا يمكن أن يزيد عن 100";
+    if (mark < 0) return "لا يمكن أن يقل عن 0";
+    return null;
+  }
+
+
   @override
   Widget build(BuildContext context) {
+    // ✅ تهيئة sizeConfig وتعريف أحجام الخطوط
+    sizeConfig().init(context);
+    final double labelFontSize = sizeConfig.defaultSize! * 1.6;
+    final double inputFontSize = sizeConfig.defaultSize! * 1.5;
+
+    const hadithColor = Colors.teal;
+
     return Padding(
-      padding: const EdgeInsets.all(15.0),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Container(
-        decoration: const BoxDecoration(
-          borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(35),
-              topRight: Radius.circular(35),
-              bottomLeft: Radius.circular(35),
-              bottomRight: Radius.circular(5)),
-          color: Color.fromARGB(255, 253, 251, 251),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
-            BoxShadow(color: Color.fromARGB(255, 65, 98, 65), spreadRadius:0.5 ,blurRadius: 8 ,offset: Offset(5, 5)),
+            BoxShadow(
+              color: hadithColor.withOpacity(0.35),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
+            ),
           ],
         ),
-        
-        child: Padding(
-          padding: const EdgeInsets.all(15.0),
-          child: hadithForForm == null
-              ? Form(
-                  key: formKey,
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          const Text(
-                            'الحديث المسمع :    ',
-                            textDirection: TextDirection.rtl,
-                          ),
-                          DropdownMenu<String>(
-                            initialSelection: hadithNum,
-                            controller: menuController,
-                            hintText: "اختر رقم الحديث",
-                            requestFocusOnTap: true,
-                            enableFilter: true,
-                            label: const Text('اختر رقم الحديث'),
-                            onSelected: (String? menu) {
-                              
-                              hadithNum =menu!;
-                              
-                            },
-                            dropdownMenuEntries: menuHadithItems
-                                .map<DropdownMenuEntry<String>>((menu) {
-                              return DropdownMenuEntry<String>(
-                                  value: menu.toString(), label: menu.toString());
-                            }).toList(),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(
-                        height: 20,
-                      ),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Container(
-                              width: 190,
-                              child: TextFormField(
-                                keyboardType: TextInputType.number,
-                                validator: all_validator,
-                                onSaved: (value) {
-                                  from = value!;
-                                },
-                                decoration: const InputDecoration(
-                                  border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.only(
-                                          topLeft: Radius.circular(19),
-                                          bottomRight: Radius.circular(19))),
-                                  label: Text(' من السطر '),
-                                  prefixIcon: Icon(
-                                    Icons.format_list_numbered_outlined,
-                                    color: Colors.black,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            SizedBox(
-                              width: 40,
-                              height: 70,
-                            ),
-                            Container(
-                              width: 190,
-                              child: TextFormField(
-                                keyboardType: TextInputType.number,
-                                validator: all_validator,
-                                onSaved: (value) {
-                                  to = value!;
-                                },
-                                decoration: const InputDecoration(
-                                  border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.only(
-                                          topLeft: Radius.circular(19),
-                                          bottomRight: Radius.circular(19))),
-                                  label: Text(' إلى السطر '),
-                                  prefixIcon: Icon(
-                                      Icons.format_list_numbered_outlined,
-                                      color: Colors.black),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(
-                        height: 20,
-                      ),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Container(
-                              width: 190,
-                              child: TextFormField(
-                                onSaved: (value) {
-                                  mark = value!;
-                                },
-                                keyboardType: TextInputType.number,
-                                validator: all_validator,
-                                decoration: const InputDecoration(
-                                  border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.only(
-                                          topLeft: Radius.circular(19),
-                                          bottomRight: Radius.circular(19))),
-                                  label: Text(' التقييم من 100'),
-                                  prefixIcon: Icon(Icons.star_half,
-                                      color: Colors.black),
-                                ),
-                              ),
-                            ),
-                            SizedBox(
-                              width: 40,
-                              height: 70,
-                            ),
-                            Container(
-                              width: 190,
-                              child: TextFormField(
-                                onSaved: (value) {
-                                  points = value!;
-                                },
-                                keyboardType: TextInputType.number,
-                                validator: all_validator,
-                                decoration: const InputDecoration(
-                                  border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.only(
-                                          topLeft: Radius.circular(19),
-                                          bottomRight: Radius.circular(19))),
-                                  label: Text('النقاط المستحقة '),
-                                  prefixIcon:
-                                      Icon(Icons.add_task, color: Colors.black),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+        padding: const EdgeInsets.all(18),
+        child: Form(
+          key: widget.formKey,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Text(
+                    "الحديث المسمع:",
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: labelFontSize),
                   ),
-                )
-              :
-              ////////////////////////////////////////////////else //////////////////////////
-              Form(
-                  key: formKey,
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          const Text(
-                            'الحديث المسمع :    ',
-                            textDirection: TextDirection.rtl,
-                          ),
-                          DropdownMenu<String>(
-                            controller: menuController,
-                            initialSelection:
-                                hadithForForm!.num.toString(),
-                            hintText: "اختر رقم الحديث",
-                            requestFocusOnTap: true,
-                            enableFilter: true,
-                            label: const Text('اختر رقم الحديث'),
-                            onSelected: (String? menu) {
-                              hadithNum = menu!;
-                            
-                            },
-                            dropdownMenuEntries: menuHadithItems
-                                .map<DropdownMenuEntry<String>>((int menu) {
-                              return DropdownMenuEntry<String>(
-                                  value: menu.toString(), label: menu.toString());
-                            }).toList(),
-                          ),
-                        ],
+                  const SizedBox(width: 12),
+                  Expanded(
+                    // ✅ استخدام DropdownMenu للبحث
+                    child: DropdownMenu<String>(
+                      controller: hadithController,
+                      initialSelection: hadithValue,
+                      enableFilter: true,
+                      requestFocusOnTap: true,
+                      hintText: "ابحث عن حديث",
+                      textStyle: TextStyle(
+                        fontSize: inputFontSize,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black87,
                       ),
-                      const SizedBox(
-                        height: 20,
+                      inputDecorationTheme: InputDecorationTheme(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(18),
+                          borderSide: BorderSide.none,
+                        ),
+                        filled: true,
+                        fillColor: hadithColor.shade50,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
                       ),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Container(
-                              width: 190,
-                              child: TextFormField(
-                                initialValue: hadithForForm!.from.toString(),
-                                keyboardType: TextInputType.number,
-                                validator: all_validator,
-                                onSaved: (value) {
-                                  from = value!;
-                                },
-                                decoration: const InputDecoration(
-                                  border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.only(
-                                          topLeft: Radius.circular(19),
-                                          bottomRight: Radius.circular(19))),
-                                  label: Text(' من الآية '),
-                                  prefixIcon: Icon(
-                                    Icons.format_list_numbered_outlined,
-                                    color: Colors.black,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            SizedBox(
-                              width: 40,
-                              height: 70,
-                            ),
-                            Container(
-                              width: 190,
-                              child: TextFormField(
-                                keyboardType: TextInputType.number,
-                                validator: all_validator,
-                                onSaved: (value) {
-                                  to = value!;
-                                },
-                                initialValue: hadithForForm!.to.toString(),
-                                decoration: const InputDecoration(
-                                  border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.only(
-                                          topLeft: Radius.circular(19),
-                                          bottomRight: Radius.circular(19))),
-                                  label: Text(' إلى الآية '),
-                                  prefixIcon: Icon(
-                                      Icons.format_list_numbered_outlined,
-                                      color: Colors.black),
-                                ),
-                              ),
-                            ),
-                          ],
+                      menuStyle: MenuStyle(
+                        backgroundColor: WidgetStateProperty.all(Colors.white),
+                        elevation: WidgetStateProperty.all(8),
+                        shape: WidgetStateProperty.all(
+                          RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                        ),
+                        padding: WidgetStateProperty.all(
+                          const EdgeInsets.symmetric(vertical: 6),
                         ),
                       ),
-                      const SizedBox(
-                        height: 20,
-                      ),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Container(
-                              width: 190,
-                              child: TextFormField(
-                                initialValue: hadithForForm!.mark.toString(),
-                                onSaved: (value) {
-                                  mark = value!;
-                                },
-                                keyboardType: TextInputType.number,
-                                validator: all_validator,
-                                decoration: const InputDecoration(
-                                  border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.only(
-                                          topLeft: Radius.circular(19),
-                                          bottomRight: Radius.circular(19))),
-                                  label: Text(' التقييم من 100'),
-                                  prefixIcon: Icon(Icons.star_half,
-                                      color: Colors.black),
+                      onSelected: (val) {
+                        if (val != null) {
+                          setState(() {
+                            hadithValue = val;
+                            _updateModel();
+                          });
+                        }
+                      },
+                      // ✅ استخدام AhadithTitles للعرض
+                      dropdownMenuEntries: Quraansoarmanage.AhadithTitles
+                          .map(
+                            (e) => DropdownMenuEntry(
+                              value: e,
+                              label: e,
+                              style: ButtonStyle(
+                                textStyle: WidgetStateProperty.all(
+                                  TextStyle(
+                                      fontSize: inputFontSize,
+                                      fontWeight: FontWeight.w500),
                                 ),
+                                foregroundColor: WidgetStateProperty.all(
+                                    hadithColor.shade700),
+                                overlayColor: WidgetStateProperty.all(
+                                    hadithColor.withOpacity(0.1)),
                               ),
                             ),
-                            SizedBox(
-                              width: 40,
-                              height: 70,
-                            ),
-                            Container(
-                              width: 190,
-                              child: TextFormField(
-                                initialValue: hadithForForm!.point.toString(),
-                                onSaved: (value) {
-                                  points = value!;
-                                },
-                                keyboardType: TextInputType.number,
-                                validator: all_validator,
-                                decoration: const InputDecoration(
-                                  border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.only(
-                                          topLeft: Radius.circular(19),
-                                          bottomRight: Radius.circular(19))),
-                                  label: Text('النقاط المستحقة '),
-                                  prefixIcon:
-                                      Icon(Icons.add_task, color: Colors.black),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                          )
+                          .toList(),
+                    ),
                   ),
-                ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              
+              // ❌ صف "من" و "إلى" تم حذفه
+              // Row( ... ),
+              
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: markController,
+                      validator: _markValidator, // ✅ استخدام التحقق
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                      ],
+                      decoration: InputDecoration(
+                        labelText: "التقييم من 100",
+                        labelStyle: TextStyle(fontSize: inputFontSize),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14)),
+                        prefixIcon: const Icon(Icons.star_half),
+                        filled: true,
+                        fillColor: Colors.grey.shade100,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: TextFormField(
+                      controller: pointController,
+                      validator: _requiredValidator, // ✅ استخدام التحقق
+                      enabled: _isPointFieldEnabled, // ✅ تفعيل/تعطيل
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                      ],
+                      decoration: InputDecoration(
+                        labelText: "النقاط المستحقة",
+                        labelStyle: TextStyle(
+                          fontSize: inputFontSize,
+                          color: _isPointFieldEnabled
+                              ? null
+                              : Colors.grey.shade500, // ✅ لون النص المعطل
+                        ),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14)),
+                        prefixIcon: const Icon(Icons.add_task),
+                        filled: true,
+                        fillColor: _isPointFieldEnabled
+                            ? Colors.grey.shade100
+                            : Colors.grey.shade200, // ✅ لون الخلفية المعطل
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
-  
-  
-  
-  }
-
-  bool submit(BuildContext context) {
-    FormState form = formKey.currentState as FormState;
-    if (!form.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(' أدخل جميع الحقول قبل الانتقال للحديث التالي'),
-        backgroundColor: const Color.fromARGB(255, 175, 79, 76),
-      ));
-      return false;
-    }
-    form.save();
-
-    var myIntfrom = int.parse(from);
-    assert(myIntfrom is int);
-
-    var myIntto = int.parse(to);
-    assert(myIntto is int);
-
-    var myIntmark = int.parse(mark);
-    assert(myIntmark is int);
-
-    var myIntpoints = int.parse(points);
-    assert(myIntpoints is int);
-    endedSurahToSend(
-            num: int.parse(hadithNum), from: myIntfrom, to: myIntto, mark: myIntmark, point: myIntpoints)
-        .dispatch(context);
-    return true;
   }
 }

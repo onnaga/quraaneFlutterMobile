@@ -16,22 +16,37 @@ dependencies:
   intl: any
   image_field: ^0.0.10
   image_picker: ^1.1.2
-  path_provider: ^2.1.4
+  path_provider: ^2.1.5
   dio: ^5.7.0
   jwt_decoder: ^2.0.1
   crypto: ^3.0.5
+  cached_network_image: ^3.3.1
+  firebase_core: ^4.1.0
+  firebase_messaging: ^16.0.1
+  url_launcher: ^6.3.2
+  connectivity_plus: ^7.0.0
+  workmanager: ^0.9.0+3
+  flutter_dotenv: ^6.0.0
 
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "images/icon.png"
+
 
 
 flutter:
   uses-material-design: true
 
   assets:
+    - .env 
     - images/icon.png
     - images/green_pattern.png
     - images/avatar.png
@@ -42,7 +57,7 @@ flutter:
     - images/hadith_book.png
     - images/checklist.png
     - images/penalty.png
-    - images/ranks.jpg
+    - images/ranks.png
 
 
   fonts:

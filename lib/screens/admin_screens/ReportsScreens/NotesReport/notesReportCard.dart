@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 class notesReportCard extends StatelessWidget {
   Map<String, dynamic>? one_note;
-  notesReportCard({required this.one_note});
+  notesReportCard({super.key, required this.one_note});
   @override
   Widget build(BuildContext context) {
     try {
@@ -50,7 +50,7 @@ class notesReportCard extends StatelessWidget {
     );
   
     } catch (e) {
-      return Text("لا يوجد ملاحظات لعرضها ");
+      return const Text("لا يوجد ملاحظات لعرضها ");
     }
 }
 }

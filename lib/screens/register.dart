@@ -1,24 +1,21 @@
-import 'dart:async';
-import 'dart:developer';
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:masjed/core/utils/QuraansoarManage.dart';
-import 'package:provider/provider.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:flutter/services.dart' show rootBundle;
-import 'package:path_provider/path_provider.dart';
+import 'package:masjed/core/utils/snackBarHelper.dart';
+import 'package:masjed/core/widgets/AutoCompleteAgeAreaLogic.dart';
+import 'package:masjed/core/widgets/RealisticAtomLoader.dart';
+import 'package:masjed/core/widgets/chapters.dart';
+import 'package:masjed/core/widgets/modern_loader.dart';
+import 'package:masjed/screens/DaoraSelectionPage.dart';
 import 'package:masjed/state/user.dart';
-
-
+import 'package:provider/provider.dart';
 
 class Register extends StatefulWidget {
+  const Register({super.key});
+
   @override
   State<StatefulWidget> createState() => RegisterState();
 }
 
-
 class RegisterState extends State<Register> {
-  // GlobalKey<ImageWidgetState> image_key = GlobalKey<ImageWidgetState>();
   GlobalKey<FormState> form_key = GlobalKey<FormState>();
   GlobalKey<ChaptersState> chapters_key = GlobalKey<ChaptersState>();
   String? username;
@@ -26,177 +23,385 @@ class RegisterState extends State<Register> {
   String? phone;
   int? age;
   bool busy = false;
+  int? selectedDaoraId;
+  String? selectedDaoraName;
+  String? job;
+  String? address;
+  String? familyStatus;
 
+  // ✅ إضافة controllers لحقول الإكمال التلقائي
+  final TextEditingController _jobController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
 
+  late Future<Map<String, List<String>>> _suggestionsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    // ✅ استدعاء الدالة لجلب البيانات عند بدء الشاشة
+    final authProvider = Provider.of<User>(context, listen: false);
+    _suggestionsFuture = authProvider.fetchSuggestions();
+  }
+
+  @override
+  void dispose() {
+    _jobController.dispose();
+    _addressController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: SingleChildScrollView(
-          child: IgnorePointer(
-            ignoring: busy,
-            child: Form(
-              key: form_key,
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 10 , horizontal: 20),
-                child: Column(
-                  children: [
-                    // -- IMAGE with ICON
+        backgroundColor: Colors.grey[100],
+        body: FutureBuilder<Map<String, List<String>>>(
+            future: _suggestionsFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: RealisticAtomLoader());
+              }
 
-                    // ImageWidget(key: image_key),
+              if (snapshot.hasError) {
+                // print('data is  : ${snapshot.data}');
+                // print('////////////////////////////////////////////////////////////////////////////////////');
+//  print('error is  : ${snapshot.error}');
+                return const Center(child: Text('حدث خطأ في تحميل البيانات'));
 
-                    const SizedBox(height: 50),
+              }else{
+              // ✅ البيانات جاهزة
 
-                    // -- Form Fields
+              }
 
-                    TextFormField(
-                      validator: username_validator,
-                      onSaved: (value){username = value;},
-                      decoration: InputDecoration(
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(45.0),
+              final suggestions = snapshot.data ?? {'jobs': [], 'areas': []};
+              final jobSuggestions = suggestions['jobs']!;
+              final areaSuggestions = suggestions['areas']!;
+
+              return Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: IgnorePointer(
+                    ignoring: busy,
+                    child: Form(
+                      key: form_key,
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 30),
+                          // العنوان
+                          Text(
+                            "إنشاء حساب جديد",
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineSmall
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blueGrey[800],
+                                ),
                           ),
-                          label: Text('الاسم الثلاثي'), prefixIcon: Icon(Icons.person)),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    TextFormField(
-                      validator: password_validator,
-                      onSaved: (value){password = value;},
-                      decoration: InputDecoration(
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(45.0),
-                          ),
-                          label: Text('كلمة المرور'), prefixIcon: Icon(Icons.password)),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    TextFormField(
-                      validator: phone_validator,
-                      onSaved: (value){phone = value;},
-                      textDirection: TextDirection.ltr,
-                      decoration: InputDecoration(
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(45.0),
-                          ),
-                          label: Text('رقم الهاتف'), prefixIcon: Icon(Icons.phone)),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    DropdownButtonFormField(
-                        onSaved: (value){age = value;},
-                        validator: age_validator,
-                        onChanged: (i){},
-                        borderRadius: BorderRadius.circular(15),
-                        menuMaxHeight: 200,
-                        decoration: InputDecoration(
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(45.0),
+                          const SizedBox(height: 30),
+                          // اختيار الدورة
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 12, horizontal: 20),
+                              shape: const StadiumBorder(),
                             ),
-                            label: Text('اختر العمر'), prefixIcon: Icon(Icons.calendar_today)
-                        ),
-                        items: List.generate(20, (i){
-                          return DropdownMenuItem(
-                            value: i+1,
-                            child: Center(child: Text(((i+1).toString())),),
-                          );
-                        })
-                    ),
+                            onPressed: () async {
+                              final result = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      const DaoraSelectionPage(),
+                                ),
+                              );
 
-                    const SizedBox(height: 20),
+                              if (result != null && result is Map) {
+                                setState(() {
+                                  selectedDaoraId = result["id"];
+                                  selectedDaoraName = result["name"];
+                                });
+                              }
+                            },
+                            icon: const Icon(Icons.mosque, color: Colors.white),
+                            label: Text(
+                              selectedDaoraName ?? "اختر الدورة",
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
 
-                    Chapters(key: chapters_key),
+                          // الاسم
+                          TextFormField(
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(45)),
+                              label: const Text("الاسم الثلاثي"),
+                              prefixIcon: const Icon(Icons.person),
+                            ),
+                            validator: username_validator,
+                            onSaved: (val) => username = val,
+                          ),
+                          const SizedBox(height: 20),
 
-                    const SizedBox(height: 20),
+                          // كلمة المرور
+                          TextFormField(
+                            obscureText: true,
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(45)),
+                              label: const Text("كلمة المرور"),
+                              prefixIcon: const Icon(Icons.lock),
+                            ),
+                            validator: password_validator,
+                            onSaved: (val) => password = val,
+                          ),
+                          const SizedBox(height: 20),
 
-                    
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text('أملك حسابا بالفعل'),
-                        TextButton(
-                                        child: Center(child: Text('تسجيل الدخول ',style: TextStyle(color: const Color.fromARGB(255, 114, 76, 175),fontWeight: FontWeight.bold),),),
-                                      onPressed: (){Navigator.pop(context);},
+                          // الهاتف
+                          TextFormField(
+                            keyboardType: TextInputType.phone,
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(45)),
+                              label: const Text("رقم الهاتف"),
+                              prefixIcon: const Icon(Icons.phone),
+                            ),
+                            validator: phone_validator,
+                            onSaved: (val) => phone = val,
+                          ),
+                          const SizedBox(height: 20),
+
+                          // العمر
+                          DropdownButtonFormField<int>(
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(45)),
+                              label: const Text("اختر العمر"),
+                              prefixIcon: const Icon(Icons.calendar_today),
+                            ),
+                            items: List.generate(70, (i) {
+                              return DropdownMenuItem(
+                                value: i + 1,
+                                child: Center(child: Text("${i + 1}")),
+                              );
+                            }),
+                            onChanged: (value) {
+                              setState(() => age = value);
+                            },
+                            validator: age_validator,
+                            onSaved: (val) => age = val,
+                          ),
+                          const SizedBox(height: 20),
+    // ✅ استبدال TextFormField القديم بالـ Widget الجديد للعمل
+                AutocompleteTextField(
+                  controller: _jobController,
+                  label: "عمل ولي الأمر",
+                  icon: Icons.work,
+                  suggestions: jobSuggestions,
+                  validator: (val) => val == null || val.isEmpty ? "ادخل العمل" : null,
+                  onSaved: (val) => job = val,
+                ),
+                
+                const SizedBox(height: 20),
+
+                // ✅ استبدال TextFormField القديم بالـ Widget الجديد لمكان السكن
+                AutocompleteTextField(
+                  controller: _addressController,
+                  label: "مكان السكن",
+                  icon: Icons.home,
+                  suggestions: areaSuggestions,
+                  validator: (val) => val == null || val.isEmpty ? "ادخل مكان السكن" : null,
+                  onSaved: (val) => address = val,
+                ),
+
+                const SizedBox(height: 20),// الوضع الأسري (اختياري)
+                          TextFormField(
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(45)),
+                              label: const Text("الوضع الأسري (اختياري)"),
+                              prefixIcon: const Icon(Icons.family_restroom),
+                            ),
+                            onSaved: (val) => familyStatus = val,
+                          ),
+                          const SizedBox(height: 20),
+                          Chapters(
+                            key: chapters_key,
+                            initialSelected: const [],
+                          ),
+
+                          const SizedBox(height: 20),
+
+
+                          // زر التسجيل
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 15),
+                                shape: const StadiumBorder(),
+                              ),
+                              onPressed: () async {
+                                final user =
+                                    Provider.of<User>(context, listen: false);
+                                final formState =
+                                    form_key.currentState as FormState;
+                                final chapterState =
+                                    chapters_key.currentState as ChaptersState;
+
+                                if (!formState.validate()) return;
+                                if (selectedDaoraId == null) {
+                                  showStyledSnackBar(context,
+                                      message: "الرجاء اختيار دورة",
+                                      isError: true);
+                                  return;
+                                }
+
+                                formState.save();
+                                setState(() {
+                                  busy = true;
+                                });
+
+                                final List<int> chapters =
+                                    chapterState.get_chapters();
+
+                                try {
+                                  final bool auth = await user.register(
+                                    username as String,
+                                    password as String,
+                                    phone as String,
+                                    age as int,
+                                    chapters,
+                                    selectedDaoraId!,
+                                    job as String,
+                                    address as String,
+                                    familyStatus,
+                                  );
+                                  if (!context.mounted) return;
+
+                                  if (auth) {
+                                    Navigator.of(context)
+                                        .popAndPushNamed('redirect');
+                                  }
+                                } catch (e) {
+                                  if (!context.mounted) return;
+                                  showStyledSnackBar(context,
+                                      message: e.toString(), isError: true);
+                                } finally {
+                                  // هذا الكود سيعمل دائماً، سواء نجحت العملية أو فشلت
+                                  setState(() {
+                                    busy = false;
+                                  });
+                                }
+                              },
+                              child: busy
+                                  ? const ModernLoader(size: 25)
+                                  : const Text(
+                                      "إنشاء الحساب",
+                                      style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold),
                                     ),
-                      ],
-                    ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
 
-            const SizedBox(height: 20),
-                    // -- Form Submit Button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          User user = Provider.of<User>(context,listen: false);
-                          FormState form_state = form_key.currentState as FormState;
-                          // ImageWidgetState image_state = image_key.currentState as ImageWidgetState;
-                          ChaptersState chapter_state = chapters_key.currentState as ChaptersState;
-                          if (!form_state.validate()){return;}
-                          form_state.save();
-                          setState(() {busy = true;});
-                          List<int> chapters = chapter_state.get_chapters();
-                          // File image = await image_state.getImage();
-                          
-                          user.register(context, username as String, password as String, phone as String, age as int, chapters)
-                              .then((auth){
-                            if (auth) {WidgetsBinding.instance.addPostFrameCallback((d){
-                              var nav = Navigator.of(context);
-                              nav.pop();
-                              nav.popAndPushNamed('redirect');
-                            });}
-                            else {WidgetsBinding.instance.addPostFrameCallback((d){setState(() {busy = false;});});}
-                          });
-                        },
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            side: BorderSide.none,
-                            shape: const StadiumBorder()),
-                        child:  (busy) ?  const SizedBox(width: 25,height: 25,child: CircularProgressIndicator(color: Colors.white,strokeWidth: 2,)) :  const Text('انشاء الحساب', style: TextStyle(color: Colors.white)),
+                          // تسجيل الدخول
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text('أملك حسابا بالفعل'),
+                              TextButton(
+                                child: const Center(
+                                  child: Text(
+                                    'تسجيل الدخول ',
+                                    style: TextStyle(
+                                        color:
+                                            Color.fromARGB(255, 114, 76, 175),
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                },
+                              ),
+                            ],
+                          )
+                        ],
                       ),
                     ),
-                  
-  
-                  ],
+                  ),
                 ),
-              ),
-            ),
-          )
-        ),
-      )
-    );
+              );
+            }));
   }
 
-
-  String? username_validator (String? value) {
-    if (value == ''){return 'ادخل اسم المستخدم';}
+  String? username_validator(String? value) {
+    if (value == '') {
+      return 'ادخل اسم المستخدم';
+    }
     return null;
   }
 
-  String? password_validator (String? value) {
-    if (value == ''){return 'ادخل كلمة مرور';}
+  String? password_validator(String? value) {
+    if (value == '') {
+      return 'ادخل كلمة مرور';
+    }
     return null;
   }
 
-  static RegExp phone_validator_regex = RegExp(r'^(\+963|0)[0-9]{9}$');
-  String? phone_validator (String? value) {
+  static RegExp phone_validator_regex = RegExp(r'^(09\d{8}|05\d{9})$');
+  String? phone_validator(String? value) {
     value = value as String;
-    if (value == ''){return 'ادخل رقم الهاتف';}
-    else if (!value.contains(phone_validator_regex)) {return 'رقم هاتف غير صالح';}
+    if (value == '') {
+      return 'ادخل رقم الهاتف';
+    } else if (!value.contains(phone_validator_regex)) {
+      return 'الرقم يجب أن يكون سوري (09 + 8 أرقام) أو تركي (05 + 9 أرقام)';
+    }
     return null;
   }
 
-  String? age_validator (int? value) {
-    if (value == null){return 'ادخل العمر';}
+  String? age_validator(int? value) {
+    if (value == null) {
+      return 'ادخل العمر';
+    }
     return null;
   }
-
 }
 
+String? username_validator(String? value) {
+  if (value == '') {
+    return 'ادخل اسم المستخدم';
+  }
+  return null;
+}
 
+String? password_validator(String? value) {
+  if (value == '') {
+    return 'ادخل كلمة مرور';
+  }
+  return null;
+}
+
+RegExp phone_validator_regex = RegExp(r'^(\+963|0)[0-9]{9}$');
+String? phone_validator(String? value) {
+  value = value as String;
+  if (value == '') {
+    return 'ادخل رقم الهاتف';
+  } else if (!value.contains(phone_validator_regex)) {
+    return 'رقم هاتف غير صالح';
+  }
+  return null;
+}
+
+String? age_validator(int? value) {
+  if (value == null) {
+    return 'ادخل العمر';
+  }
+  return null;
+}
 
 
 // class ImageWidget extends StatefulWidget {
@@ -280,74 +485,3 @@ class RegisterState extends State<Register> {
 
 // }
 
-
-
-class Chapters extends StatefulWidget {
-  Chapters({required super.key});
-
-  @override
-  State<StatefulWidget> createState() => ChaptersState();
-}
-
-class ChaptersState extends State<Chapters> {
-  final List<Map<String,dynamic>> list = List.generate(30, (i){return {'name': juz_list[i] , 'checked': false };});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 200,
-      height: 50,
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(45),border: Border.all(width: 1,color: const Color.fromARGB(255, 0, 0, 0))),
-      child: TextButton(
-        onPressed: (){
-          showDialog(
-              context: context,
-              barrierDismissible: true,
-              builder: (context) {
-                return SimpleDialog(
-                  children: List.generate(30, (i){
-                    return ListTile(
-                        title: Text(list[i]['name']),
-                        leading: ChapterButton(i,list)
-                    );
-                  }),
-                );
-              }
-          );
-        },
-        child: Text('تحديد الأجزاء المحفوظة',style: TextStyle(color: Color.fromARGB(255, 58, 106, 57),fontWeight: FontWeight.bold),),
-      ),
-    );
-  }
-
-  List<int> get_chapters () {
-    List<int> chapters = [];
-    for (int i = 0 ; i<30 ; i++) { if (list[i]['checked']) {chapters.add(i+1);} }
-    return chapters;
-  }
-
-  static final List<String> juz_list = Quraansoarmanage.AzaaList;}
-
-
-
-class ChapterButton extends StatefulWidget {
-  final int i;
-  final List<Map<String,dynamic>> list;
-  ChapterButton(this.i,this.list);
-
-  @override
-  State<StatefulWidget> createState() => ChapterButtonState();
-}
-
-class ChapterButtonState extends State<ChapterButton> {
-  @override
-  Widget build(BuildContext context) {
-    return Checkbox(
-      activeColor: Colors.green,
-      value: widget.list[widget.i]['checked'],
-      onChanged: (v){setState(() {
-        widget.list[widget.i]['checked'] = v;
-      });},
-    );
-  }
-}

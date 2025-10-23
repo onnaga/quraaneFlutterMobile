@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-import 'package:flutter/widgets.dart';
+import 'package:masjed/core/utils/sizeConfig.dart';
 import 'package:masjed/screens/admin_screens/ManagmentScreens/AddAdminsScreen.dart';
 import 'package:masjed/screens/admin_screens/ManagmentScreens/SHowTeacherScreen.dart';
 import 'package:masjed/screens/admin_screens/ManagmentScreens/WaitingStudents.dart';
@@ -10,75 +9,68 @@ import 'package:provider/provider.dart';
 
 
 class AdminsManagment extends StatelessWidget {
-  AdminsManagment({super.key});
+
+  AdminsManagment({super.key });
 
    List<Widget> tabs =  [
     
-    TeachersScreen(),
-    WaitingStudentsPage()
+    const TeachersScreen(),
+    const WaitingStudentsPage()
   ];
 
   @override
   Widget build(BuildContext context) {
     // WaitingStudentsPage
     User user = Provider.of<User>(context,listen: false);
+    sizeConfig().init(context);
+final double tabFontSize = sizeConfig.defaultSize! * 1.5;
+
     user.privilege==3?tabs =  [
-    AddAdminsScreen(),
-    TeachersScreen(),
-    WaitingStudentsPage(),
+    const AddAdminsScreen(),
+    const TeachersScreen(),
+    const WaitingStudentsPage(),
   ]:  tabs =  tabs;
-    return user.privilege==3? 
-    /////////////////////////////////////if///////////////////////////////////////
-    DefaultTabController(
-      length: tabs.length,
-      child: Scaffold(
-        appBar: const TabBar(
-          splashBorderRadius: BorderRadius.all(Radius.circular(38)),
-          indicatorColor: Colors.green,
-          labelColor: Color.fromARGB(255, 0, 0, 0),
-          dividerColor: Color.fromARGB(255, 94, 136, 80),
-          tabs: [
-            
-            Tab(icon: Icon(Icons.account_circle_rounded), text: 'إضافة أستاذ'),
-            
-            Tab(
-                icon: Icon(Icons.supervised_user_circle_sharp),
-                text: 'عرض الأساتذة'),
-                 
-                 Tab(icon: Icon(Icons.watch_later_outlined), text: 'قائمة الانتظار'),
-          ],
-        ),
-        body: TabBarView(
-          children: tabs,
-        ),
+  // ✅ الخطوة 2: تحديد قائمة التابات بناءً على الصلاحية
+final List<Widget> tabsList;
+if (user.privilege == 3) {
+  tabsList = const [
+    Tab(icon: Icon(Icons.person_add_alt_1), text: 'إضافة أستاذ'),
+    Tab(icon: Icon(Icons.people_alt_outlined), text: 'الأساتذة'),
+    Tab(icon: Icon(Icons.watch_later_outlined), text: 'الانتظار'),
+  ];
+} else {
+  tabsList = const [
+    Tab(icon: Icon(Icons.people_alt_outlined), text: 'الأساتذة'),
+    Tab(icon: Icon(Icons.watch_later_outlined), text: 'الانتظار'),
+  ];
+}
+    // ✅ الخطوة 3: بناء واجهة واحدة باستخدام قائمة التابات المحددة
+return DefaultTabController(
+  // استخدم طول القائمة الديناميكية
+  length: tabsList.length,
+  child: Scaffold(
+    appBar: TabBar(
+      
+      splashBorderRadius: const BorderRadius.all(Radius.circular(38)),
+      indicatorColor: Colors.green,
+      labelColor: const Color.fromARGB(255, 0, 0, 0),
+      dividerColor: const Color.fromARGB(255, 94, 136, 80),
+      // ✨ تطبيق حجم الخط المتجاوب
+      labelStyle: TextStyle(
+        fontSize: tabFontSize,
+        fontWeight: FontWeight.bold,
       ),
-    ):
-    
-    /////////////////////////////////////else //////////////////////////////
-    DefaultTabController(
-      length: tabs.length,
-      child: Scaffold(
-        appBar: const TabBar(
-          splashBorderRadius: BorderRadius.all(Radius.circular(38)),
-          indicatorColor: Colors.green,
-          labelColor: Color.fromARGB(255, 0, 0, 0),
-          dividerColor: Color.fromARGB(255, 94, 136, 80),
-          tabs: [
-            
-           
-            
-            Tab(
-                icon: Icon(Icons.supervised_user_circle_sharp),
-                text: 'عرض الأساتذة'),
-                 
-                 Tab(icon: Icon(Icons.watch_later_outlined), text: 'قائمة الانتظار'),
-          ],
-        ),
-        body: TabBarView(
-          children: tabs,
-        ),
+      unselectedLabelStyle: TextStyle(
+        fontSize: tabFontSize * 0.9,
       ),
-    );
+      // استخدام قائمة التابات الديناميكية
+      tabs: tabsList,
+    ),
+    body: TabBarView(
+      children: tabs,
+    ),
+  ),
+);
   }
 }
 

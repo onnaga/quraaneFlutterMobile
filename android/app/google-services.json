@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "577596496037",
+    "project_id": "halakate-1c474",
+    "storage_bucket": "halakate-1c474.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:577596496037:android:2342e3e321c9d76fba954c",
+        "android_client_info": {
+          "package_name": "com.example.masjed"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA2m9XuSLuOaGqKIqVhP0k8usp-iWrm2Xc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

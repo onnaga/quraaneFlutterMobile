@@ -1,268 +1,183 @@
-
 import 'package:flutter/material.dart';
 import 'package:masjed/core/utils/QuraansoarManage.dart';
-import 'package:masjed/data/objects.dart';
+import 'package:masjed/core/utils/sizeConfig.dart'; // ✅ استيراد sizeConfig
+import 'package:masjed/models/objects.dart';
+
+class AddHadithHomework extends StatefulWidget {
+  final homeworkSurahToSend? homeworkForForm;
+  final GlobalKey<FormState> formKey; // ✅ تم تعديل النوع
+  const AddHadithHomework(
+      {super.key, this.homeworkForForm, required this.formKey});
+
+  @override
+  State<AddHadithHomework> createState() => _AddHadithHomeworkState();
+}
+
+class _AddHadithHomeworkState extends State<AddHadithHomework> {
+  // ❌ late TextEditingController fromController;
+  // ❌ late TextEditingController toController;
+
+  // ✅ استخدام عناوين الأحاديث لسهولة البحث والاختيار
+  final TextEditingController hadithController = TextEditingController();
+  String hadithValue = Quraansoarmanage.AhadithTitles.first;
 
 
-
-class AddHadithHomework extends StatelessWidget {
-    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
-  
-final TextEditingController menuController = TextEditingController();
-  static List<int> menuItems = Quraansoarmanage.AhadithNumber;
-    String hadithNum = '';
-  String from = '';
-  String to = '';
-    homeworkSurahToSend? homeworkForForm;
- 
-
-   AddHadithHomework({super.key});
-  AddHadithHomework.completedForm({required this.homeworkForForm});
-  String? all_validator(String? value) {
-    if (value == '') {
-      return 'هذا الحقل مطلوب';
-    }
-    return null;
+  void _updateModel() {
+    if (widget.homeworkForForm == null) return;
+    // ✅ num الآن هو فهرس الحديث في قائمة العناوين
+    widget.homeworkForForm!.num = Quraansoarmanage.AhadithTitles.indexOf(hadithValue);
+    widget.homeworkForForm!.from = 0; // ✅ قيمة ثابتة
+    widget.homeworkForForm!.to = 0;   // ✅ قيمة ثابتة
   }
+
+  @override
+  void initState() {
+    super.initState();
+
+    final initialHomework = widget.homeworkForForm;
+
+    // ❌ fromController = ...
+    // ❌ toController = ...
+
+    // ✅ تحديث منطق القيمة الأولية ليتناسب مع الفهرس والعناوين
+    hadithValue = (initialHomework != null &&
+            initialHomework.num >= 0 &&
+            initialHomework.num < Quraansoarmanage.AhadithTitles.length)
+        ? Quraansoarmanage.AhadithTitles[initialHomework.num]
+        : Quraansoarmanage.AhadithTitles.first;
+        
+    hadithController.text = hadithValue;
+
+    // ❌ fromController.addListener(_updateModel);
+    // ❌ toController.addListener(_updateModel);
+  }
+
+  @override
+  void dispose() {
+    // ❌ fromController.removeListener(_updateModel);
+    // ❌ toController.removeListener(_updateModel);
+
+    // ❌ fromController.dispose();
+    // ❌ toController.dispose();
+    hadithController.dispose();
+    super.dispose();
+  }
+
+  // ❌ _validator ليس مطلوباً إذا لم تكن هناك حقول TextFormField أخرى
+
   @override
   Widget build(BuildContext context) {
-  return Padding(
-      padding: const EdgeInsets.all(10.0),
-      child: Container(
-     decoration: const BoxDecoration(
-          borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(5),
-              topRight: Radius.circular(35),
-              bottomLeft: Radius.circular(35),
-              bottomRight: Radius.circular(35)),
-          color: Color.fromARGB(255, 253, 251, 251),
-          boxShadow: [
-            BoxShadow(color: Color.fromARGB(255, 175, 102, 76), spreadRadius:0.5 ,blurRadius: 8 ,offset: Offset(5, 5)),
-          ],
-        ),
-       
-        child: Padding(
-          padding: const EdgeInsets.all(15.0),
-          child: homeworkForForm == null
-              ? Form(
-                  key: formKey,
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          const Text(
-                            'الواجب القادم :    ',
-                            textDirection: TextDirection.rtl,
-                          ),
-                          DropdownMenu<String>(
-                            initialSelection: hadithNum,
-                            controller: menuController,
-                            hintText: "اختر رقم الحديث",
-                            requestFocusOnTap: true,
-                            enableFilter: true,
-                            label: const Text('اختر الحديث'),
-                            onSelected: (String? menu) {
-                              hadithNum = menu!;
-                            
-                            },
-                            dropdownMenuEntries: menuItems
-                                .map<DropdownMenuEntry<String>>((int menu) {
-                              return DropdownMenuEntry<String>(
-                                  value: menu.toString(), label: menu.toString());
-                            }).toList(),
-                          ),
-                        ],
+    // ✅ تهيئة sizeConfig وتعريف أحجام الخطوط
+    sizeConfig().init(context);
+    final double labelFontSize = sizeConfig.defaultSize! * 1.6;
+    final double inputFontSize = sizeConfig.defaultSize! * 1.5;
+
+    const homeworkColor = Colors.blue;
+
+    return Form(
+      key: widget.formKey,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: homeworkColor.withOpacity(0.35),
+                blurRadius: 15,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Text(
+                    "الحديث المطلوب:",
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: labelFontSize),
+                    textDirection: TextDirection.rtl,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    // ✅ استخدام DropdownMenu للبحث
+                    child: DropdownMenu<String>(
+                      controller: hadithController,
+                      initialSelection: hadithValue,
+                      enableFilter: true,
+                      requestFocusOnTap: true,
+                      hintText: "ابحث عن حديث",
+                      textStyle: TextStyle(
+                        fontSize: inputFontSize,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black87,
                       ),
-                      const SizedBox(
-                        height: 20,
+                      inputDecorationTheme: InputDecorationTheme(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(18),
+                          borderSide: BorderSide.none,
+                        ),
+                        filled: true,
+                        fillColor: homeworkColor.shade50,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
                       ),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Container(
-                              width: 190,
-                              child: TextFormField(
-                                keyboardType: TextInputType.number,
-                                validator: all_validator,
-                                onSaved: (value) {
-                                  from = value!;
-                                },
-                                decoration: const InputDecoration(
-                                  border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.only(
-                                          topLeft: Radius.circular(19),
-                                          bottomRight: Radius.circular(19))),
-                                  label: Text(' من السطر '),
-                                  prefixIcon: Icon(
-                                    Icons.format_list_numbered_outlined,
-                                    color: Colors.black,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            SizedBox(
-                              width: 40,
-                              height: 70,
-                            ),
-                            Container(
-                              width: 190,
-                              child: TextFormField(
-                                keyboardType: TextInputType.number,
-                                validator: all_validator,
-                                onSaved: (value) {
-                                  to = value!;
-                                },
-                                decoration: const InputDecoration(
-                                  border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.only(
-                                          topLeft: Radius.circular(19),
-                                          bottomRight: Radius.circular(19))),
-                                  label: Text(' إلى السطر '),
-                                  prefixIcon: Icon(
-                                      Icons.format_list_numbered_outlined,
-                                      color: Colors.black),
-                                ),
-                              ),
-                            ),
-                          ],
+                      menuStyle: MenuStyle(
+                        backgroundColor: WidgetStateProperty.all(Colors.white),
+                        elevation: WidgetStateProperty.all(8),
+                        shape: WidgetStateProperty.all(
+                          RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                        ),
+                        padding: WidgetStateProperty.all(
+                          const EdgeInsets.symmetric(vertical: 6),
                         ),
                       ),
-                      const SizedBox(
-                        height: 20,
-                      ),
-  ],
-                  ),
-                )
-              :
-              //////////x//////////////////////////////////////else //////////////////////////
-              Form(
-                  key: formKey,
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          const Text(
-                            'الواجب القادم  :    ',
-                            textDirection: TextDirection.rtl,
-                          ),
-                          DropdownMenu<String>(
-                            controller: menuController,
-                            initialSelection:
-                                Quraansoarmanage.soarList[homeworkForForm!.num],
-                            hintText: "اختر الحديث",
-                            requestFocusOnTap: true,
-                            enableFilter: true,
-                            label: const Text('اختر الحديث'),
-                            onSelected: (String? menu) {
-                              hadithNum = menu!;
-                         
-                            },
-                            dropdownMenuEntries: menuItems
-                                .map<DropdownMenuEntry<String>>((int menu) {
-                              return DropdownMenuEntry<String>(
-                                  value: menu.toString(), label: menu.toString());
-                            }).toList(),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(
-                        height: 20,
-                      ),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Container(
-                              width: 190,
-                              child: TextFormField(
-                                initialValue: homeworkForForm!.from.toString(),
-                                keyboardType: TextInputType.number,
-                                validator: all_validator,
-                                onSaved: (value) {
-                                  from = value!;
-                                },
-                                decoration: const InputDecoration(
-                                  border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.only(
-                                          topLeft: Radius.circular(19),
-                                          bottomRight: Radius.circular(19))),
-                                  label: Text(' من الآية '),
-                                  prefixIcon: Icon(
-                                    Icons.format_list_numbered_outlined,
-                                    color: Colors.black,
-                                  ),
+                      onSelected: (val) {
+                        if (val != null) {
+                          setState(() {
+                            hadithValue = val;
+                            _updateModel();
+                          });
+                        }
+                      },
+                      // ✅ استخدام AhadithTitles للعرض
+                      dropdownMenuEntries: Quraansoarmanage.AhadithTitles
+                          .map(
+                            (e) => DropdownMenuEntry(
+                              value: e,
+                              label: e,
+                              style: ButtonStyle(
+                                textStyle: WidgetStateProperty.all(
+                                  TextStyle(
+                                      fontSize: inputFontSize,
+                                      fontWeight: FontWeight.w500),
                                 ),
+                                foregroundColor: WidgetStateProperty.all(
+                                    homeworkColor.shade700),
+                                overlayColor: WidgetStateProperty.all(
+                                    homeworkColor.withOpacity(0.1)),
                               ),
                             ),
-                            SizedBox(
-                              width: 40,
-                              height: 70,
-                            ),
-                            Container(
-                              width: 190,
-                              child: TextFormField(
-                                keyboardType: TextInputType.number,
-                                validator: all_validator,
-                                onSaved: (value) {
-                                  to = value!;
-                                },
-                                initialValue: homeworkForForm!.to.toString(),
-                                decoration: const InputDecoration(
-                                  border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.only(
-                                          topLeft: Radius.circular(19),
-                                          bottomRight: Radius.circular(19))),
-                                  label: Text(' إلى الآية '),
-                                  prefixIcon: Icon(
-                                      Icons.format_list_numbered_outlined,
-                                      color: Colors.black),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(
-                        height: 20,
-                      ),
-     ],
+                          )
+                          .toList(),
+                    ),
                   ),
-                ),
+                ],
+              ),
+              
+              // ❌ صف "من" و "إلى" تم حذفه
+              // const SizedBox(height: 18),
+              // Row( ... ),
+              
+            ],
+          ),
         ),
       ),
     );
   }
-
- 
-
-bool submit(BuildContext context) {
-    FormState form = formKey.currentState as FormState;
-    if (!form.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(' أدخل جميع الحقول قبل الانتقال للحديث  التالي'),
-        backgroundColor: const Color.fromARGB(255, 175, 79, 76),
-      ));
-      return false;
-    }
-    form.save();
-
-    var myIntfrom = int.parse(from);
-    assert(myIntfrom is int);
-
-    var myIntto = int.parse(to);
-    assert(myIntto is int);
-
-
-    homeworkSurahToSend(
-            num: int.parse(hadithNum), from: myIntfrom, to: myIntto)
-        .dispatch(context);
-    return true;
-  }
-
-
-
 }
