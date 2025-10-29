@@ -41,3 +41,5 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+".env" 
+"android/app/halakate-1c474-firebase-adminsdk-fbsvc-370eb6294c.json" 

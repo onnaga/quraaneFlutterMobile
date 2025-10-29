@@ -103,7 +103,7 @@ class usersList extends StatelessWidget {
 
     // ✅ Determine user's permission to view notes report
     final bool canViewNotes = (user_id_from_api == user.id ||
-        reportForUser['teacher_id'] == user.username ||
+        reportForUser['teacher_id'] == user.id ||
         user.privilege == 3);
 return Padding(
   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),

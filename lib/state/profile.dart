@@ -111,7 +111,7 @@ Future<reciveLatest?> get_Latest(int privilege, int userId) async {
     SharedPreferences preferences = await SharedPreferences.getInstance();
     String? token = preferences.getString('token');
 
-    if (token == "null" || token == null) {
+    if (token == "null") {
       throw Exception('المستخدم غير مسجل دخوله');
     }
 
@@ -154,7 +154,7 @@ Future<reciveLatest?> get_Latest(int privilege, int userId) async {
       SharedPreferences preferences = await SharedPreferences.getInstance();
       String? token = preferences.getString('token');
 
-      if (token == "null" || token == null) {
+      if (token == "null") {
         return {'success': false, 'message': 'المستخدم غير مسجل دخوله'};
       }
 
@@ -192,49 +192,56 @@ Future<reciveLatest?> get_Latest(int privilege, int userId) async {
       return {'success': false, 'message': 'حدث خطأ غير متوقع'};
     }
   }
+// (نفترض أن هذا الملف هو profile.dart أو ما شابه)
 
-  Future<bool> add_wanting_students(List<int> watingStudents) async {
-    SharedPreferences preferences = await SharedPreferences.getInstance();
-    String? token = preferences.getString('token');
-
-    if (token == null || token == "null") {
-      // رمي خطأ يفيد بأن المستخدم غير مسجل
-      throw Exception('جلسة المستخدم منتهية، يرجى تسجيل الدخول مرة أخرى.');
-    }
-
-    dio.options.headers["authorization"] = "Bearer $token";
-    var url = '${baseUrl}add_wanting_students';
-
-    try {
-      var response = await dio.post(url, data: jsonEncode(watingStudents));
-
-      // التعامل مع الأخطاء بناءً على حالة الرد
-      if (response.statusCode == 500) {
-        throw Exception('حدثت مشكلة في الخادم، يرجى المحاولة لاحقاً.');
-      }
-      if (response.statusCode == 401) {
-        throw Exception(
-            response.data['message'] ?? 'غير مصرح لك بالقيام بهذه العملية.');
-      }
-      if (response.statusCode != 200 && response.statusCode != 201) {
-        throw Exception('فشلت العملية، رمز الخطأ: ${response.statusCode}');
-      }
-
-      // print("add wanting students");
-      return true;
-    } catch (e) {
-      // التقاط الأخطاء العامة (مثل مشاكل الشبكة) وإعادة رميها
-      throw Exception(e.toString().contains('SocketException')
-          ? 'فشل الاتصال بالخادم، تحقق من اتصالك بالإنترنت.'
-          : e.toString());
-    }
+Future<bool> add_wanting_students(List<int> watingStudents, bool isGlobal) async {
+  SharedPreferences preferences = await SharedPreferences.getInstance();
+  String? token = preferences.getString('token');
+  if (token == "null") {
+    throw Exception('جلسة المستخدم منتهية، يرجى تسجيل الدخول مرة أخرى.');
   }
 
-  Future<List<TestData>> get_tests(int daoraId) async {
+  dio.options.headers["authorization"] = "Bearer $token";
+  var url = '${baseUrl}add_wanting_students';
+print('request url :  $baseUrl') ;
+
+  // --- التعديل هنا ---
+  // 1. قم بإنشاء كائن Map ليحمل كل البيانات
+  Map<String, dynamic> requestData = {
+    'students': watingStudents, // قائمة الطلاب
+    'glob': isGlobal           // المتغير البوليان
+  };
+  // --- نهاية التعديل ---
+print('requestData  :  $requestData') ;
+  try {
+    // 2. أرسل الـ Map مباشرة. Dio ستقوم بتحويله إلى JSON
+    var response = await dio.post(url, data: requestData);
+print(response);
+    // ... باقي الكود الخاص بك للتحقق من response.statusCode ...
+    if (response.statusCode == 500) {
+       throw Exception('حدثت مشكلة في الخادم، يرجى المحاولة لاحقاً.');
+    }
+    if (response.statusCode == 401 || response.statusCode == 403) { // 403 هو الرمز الذي أرسلته أنت
+       throw Exception(
+           response.data['message'] ?? 'غير مصرح لك بالقيام بهذه العملية.');
+    }
+    if (response.statusCode != 200 && response.statusCode != 201) {
+       throw Exception('فشلت العملية، رمز الخطأ: ${response.statusCode}');
+    }
+
+    return true;
+  } catch (e) {
+    print(e);
+    // ... باقي معالجة الأخطاء ...
+    throw Exception(e.toString().contains('SocketException')
+        ? 'فشل الاتصال بالخادم، تحقق من اتصالك بالإنترنت.'
+        : e.toString());
+  }
+}  Future<List<TestData>> get_tests(int daoraId) async {
     SharedPreferences preferences = await SharedPreferences.getInstance();
     String? token = preferences.getString('token');
 
-    if (token == null || token == "null") {
+    if (token == "null") {
       throw Exception('جلسة المستخدم منتهية، يرجى تسجيل الدخول مرة أخرى.');
     }
 
@@ -279,7 +286,7 @@ Future<reciveLatest?> get_Latest(int privilege, int userId) async {
     SharedPreferences preferences = await SharedPreferences.getInstance();
     String? token = preferences.getString('token');
 
-    if (token == null || token == "null") {
+    if (token == "null") {
       throw Exception('جلسة المستخدم منتهية، يرجى تسجيل الدخول مرة أخرى.');
     }
 
@@ -385,7 +392,7 @@ Future<reciveLatest?> get_Latest(int privilege, int userId) async {
     SharedPreferences preferences = await SharedPreferences.getInstance();
     String? token = preferences.getString('token');
 
-    if (token == null || token == "null") {
+    if (token == "null") {
       throw Exception('جلسة المستخدم منتهية، يرجى تسجيل الدخول مرة أخرى.');
     }
 
@@ -434,7 +441,7 @@ Future<reciveLatest?> get_Latest(int privilege, int userId) async {
     SharedPreferences preferences = await SharedPreferences.getInstance();
     String? token = preferences.getString('token');
 
-    if (token == null || token == "null") {
+    if (token == "null") {
       throw Exception('جلسة المستخدم منتهية، يرجى تسجيل الدخول مرة أخرى.');
     }
 
@@ -483,7 +490,7 @@ Future<reciveLatest?> get_Latest(int privilege, int userId) async {
     SharedPreferences preferences = await SharedPreferences.getInstance();
     String? token = preferences.getString('token');
 
-    if (token == null || token == "null") {
+    if (token == "null") {
       throw Exception('جلسة المستخدم منتهية، يرجى تسجيل الدخول مرة أخرى.');
     }
 
@@ -512,7 +519,7 @@ Future<reciveLatest?> get_Latest(int privilege, int userId) async {
     SharedPreferences preferences = await SharedPreferences.getInstance();
     String? token = preferences.getString('token');
 
-    if (token == null || token == "null") {
+    if (token == "null") {
       throw Exception('جلسة المستخدم منتهية، يرجى تسجيل الدخول مرة أخرى.');
     }
 
@@ -540,7 +547,7 @@ Future<bool> add_new_test(String at, String notes, bool isAukaf, int daoraId) as
   SharedPreferences prefs = await SharedPreferences.getInstance();
   String? token = prefs.getString('token');
 
-  if (token == null || token == "null") {
+  if (token == "null") {
     throw Exception('جلسة المستخدم منتهية، يرجى تسجيل الدخول مرة أخرى.');
   }
 
@@ -592,7 +599,7 @@ Future<bool> add_new_test(String at, String notes, bool isAukaf, int daoraId) as
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('token');
 
-    if (token == null || token == "null") {
+    if (token == "null") {
       throw Exception('جلسة المستخدم منتهية، يرجى تسجيل الدخول مرة أخرى.');
     }
 
@@ -629,7 +636,7 @@ Future<bool> add_new_test(String at, String notes, bool isAukaf, int daoraId) as
     SharedPreferences preferences = await SharedPreferences.getInstance();
     String? token = preferences.getString('token');
 
-    if (token == null || token == "null") {
+    if (token == "null") {
       throw Exception('جلسة المستخدم منتهية، يرجى تسجيل الدخول مرة أخرى.');
     }
 
@@ -659,7 +666,7 @@ Future<bool> add_new_test(String at, String notes, bool isAukaf, int daoraId) as
     SharedPreferences preferences = await SharedPreferences.getInstance();
     String? token = preferences.getString('token');
 
-    if (token == null || token == "null") {
+    if (token == "null") {
       throw Exception('جلسة المستخدم منتهية، يرجى تسجيل الدخول مرة أخرى.');
     }
 
@@ -688,7 +695,7 @@ Future<bool> add_new_test(String at, String notes, bool isAukaf, int daoraId) as
     SharedPreferences preferences = await SharedPreferences.getInstance();
     String? token = preferences.getString('token');
 
-    if (token == null || token == "null") {
+    if (token == "null") {
       throw Exception('جلسة المستخدم منتهية، يرجى تسجيل الدخول مرة أخرى.');
     }
 
@@ -720,7 +727,7 @@ Future<bool> add_new_test(String at, String notes, bool isAukaf, int daoraId) as
     String? token = preferences.getString('token');
     // print('token is: $token');
 
-    if (token == null || token == "null") {
+    if (token == "null") {
       throw Exception('جلسة المستخدم منتهية، يرجى تسجيل الدخول مرة أخرى.');
     }
 
@@ -766,7 +773,7 @@ Future<bool> add_new_test(String at, String notes, bool isAukaf, int daoraId) as
     SharedPreferences preferences = await SharedPreferences.getInstance();
     String? token = preferences.getString('token');
 
-    if (token == null || token == "null") {
+    if (token == "null") {
       throw Exception('جلسة المستخدم منتهية، يرجى تسجيل الدخول مرة أخرى.');
     }
 

@@ -21,10 +21,15 @@ class AddHomework extends StatefulWidget {
 class _AddHomeworkState extends State<AddHomework> {
   late TextEditingController fromController;
   late TextEditingController toController;
-  
+
   // ✅ لإدارة القائمة المنسدلة القابلة للبحث
   final TextEditingController soraController = TextEditingController();
   String soraValue = Quraansoarmanage.soarList.first;
+
+  // 🆕 متغير لحالة "السورة كاملة"
+  bool _isFullSurah = false;
+  // 🆕 متغير لمنع المستمعات من العمل أثناء التحديث البرمجي
+  bool _isUpdatingAyatProgrammatically = false;
 
   void _updateModel() {
     if (widget.homeworkForForm == null) return;
@@ -49,18 +54,23 @@ class _AddHomeworkState extends State<AddHomework> {
     soraValue = widget.homeworkForForm != null
         ? Quraansoarmanage.soarList[widget.homeworkForForm!.num]
         : Quraansoarmanage.soarList.first;
-        
+
     // ✅ تهيئة المتحكم
     soraController.text = soraValue;
 
-    fromController.addListener(_updateModel);
-    toController.addListener(_updateModel);
+    // 🆕 ربط المستمعات بالدوال الجديدة للتحكم بالـ Checkbox
+    fromController.addListener(_onFromAyahChanged);
+    toController.addListener(_onToAyahChanged);
+
+    // 🆕 تحقق من الحالة الأولية لحقول الآيات لمطابقتها مع "السورة كاملة"
+    _checkInitialFullSurahState();
   }
 
   @override
   void dispose() {
-    fromController.removeListener(_updateModel);
-    toController.removeListener(_updateModel);
+    // 🆕 إزالة المستمعات الجديدة
+    fromController.removeListener(_onFromAyahChanged);
+    toController.removeListener(_onToAyahChanged);
 
     fromController.dispose();
     toController.dispose();
@@ -69,14 +79,81 @@ class _AddHomeworkState extends State<AddHomework> {
     super.dispose();
   }
 
+  // 🆕 دالة للتحقق من الحالة الأولية (عند فتح الفورم للتعديل مثلاً)
+  void _checkInitialFullSurahState() {
+    if (widget.homeworkForForm?.from == 1) {
+      final maxAyat = Quraansoarmanage.ayatCount[soraValue] ?? 0;
+      if (maxAyat > 0 && widget.homeworkForForm?.to == maxAyat) {
+        setState(() {
+          _isFullSurah = true;
+        });
+      }
+    }
+  }
+
+  // 🆕 دوال المستمعات الجديدة لحقول "من/إلى"
+  void _onFromAyahChanged() {
+    if (_isUpdatingAyatProgrammatically) return;
+    _uncheckFullSurahOnManualEdit();
+    _updateModel();
+  }
+
+  void _onToAyahChanged() {
+    if (_isUpdatingAyatProgrammatically) return;
+    _uncheckFullSurahOnManualEdit();
+    _updateModel();
+  }
+
+  // 🆕 دالة لإلغاء تحديد "السورة كاملة" عند التغيير اليدوي
+  void _uncheckFullSurahOnManualEdit() {
+    if (_isFullSurah) {
+      final maxAyat = Quraansoarmanage.ayatCount[soraValue] ?? 0;
+      final bool matchesFullSurah = (fromController.text == "1" &&
+          toController.text == (maxAyat > 0 ? maxAyat.toString() : ""));
+
+      if (!matchesFullSurah) {
+        setState(() {
+          _isFullSurah = false;
+        });
+      }
+    }
+  }
+
+  // 🆕 دالة لتحديث الحقول عند ضغط "السورة كاملة"
+  void _toggleFullSurah(bool? newValue) {
+    if (newValue == null) return;
+
+    setState(() {
+      _isFullSurah = newValue;
+      _isUpdatingAyatProgrammatically = true; // 🆕 منع المستمعات
+
+      if (_isFullSurah) {
+        // إذا تم التحديد: املأ الحقول
+        final maxAyat = Quraansoarmanage.ayatCount[soraValue] ?? 0;
+        fromController.text = "1";
+        toController.text = maxAyat > 0 ? maxAyat.toString() : "";
+      } else {
+        // إذا تم إلغاء التحديد: أفرغ الحقول
+        fromController.text = "";
+        toController.text = "";
+      }
+
+      _isUpdatingAyatProgrammatically = false; // 🆕 السماح للمستمعات
+      _updateModel(); // تحديث النموذج
+
+      // إعادة التحقق لإظهار الأخطاء أو إخفائها فوراً
+      Future.delayed(const Duration(milliseconds: 50), () {
+        widget.formKey.currentState?.validate();
+      });
+    });
+  }
+
   // ✅ دوال التحقق الجديدة
   String? _fromValidator(String? v) {
     if (v == null || v.isEmpty) return "هذا الحقل مطلوب";
     final fromAyah = int.tryParse(v);
     if (fromAyah == null) return "رقم غير صالح";
     if (fromAyah < 1) return "لا يمكن أن يقل عن 1";
-
-    // أعد التحقق من "إلى" إذا كان "من" صالحًا
 
     return null;
   }
@@ -175,9 +252,24 @@ class _AddHomeworkState extends State<AddHomework> {
                         if (val != null) {
                           setState(() {
                             soraValue = val;
-                            _updateModel();
+                            // _updateModel(); // 🆕 تم نقلها للأسفل
+
+                            // 🆕 تحديث الحقول إذا كان "السورة كاملة" محدداً
+                            if (_isFullSurah) {
+                              _isUpdatingAyatProgrammatically = true;
+                              final maxAyat =
+                                  Quraansoarmanage.ayatCount[soraValue] ?? 0;
+                              fromController.text = "1";
+                              toController.text =
+                                  maxAyat > 0 ? maxAyat.toString() : "";
+                              _isUpdatingAyatProgrammatically = false;
+                            }
+
+                            _updateModel(); // 🆕 تحديث النموذج بعد كل التغييرات
+
                             // ✅ إعادة التحقق من الحقول عند تغيير السورة
-                            Future.delayed(const Duration(milliseconds: 50), () {
+                            Future.delayed(const Duration(milliseconds: 50),
+                                () {
                               widget.formKey.currentState?.validate();
                             });
                           });
@@ -206,7 +298,28 @@ class _AddHomeworkState extends State<AddHomework> {
                   ),
                 ],
               ),
-              const SizedBox(height: 18),
+              // const SizedBox(height: 18), // 🆕 تم تعديل المسافة
+
+              // 🆕 إضافة CheckboxListTile
+              CheckboxListTile(
+                title: Text(
+                  "السورة كاملة",
+                  style: TextStyle(
+                      fontSize: labelFontSize * 0.95,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87),
+                ),
+                value: _isFullSurah,
+                onChanged: _toggleFullSurah,
+                activeColor: Colors.blue, // 🆕 مطابقة اللون الأزرق
+                controlAffinity: ListTileControlAffinity.leading,
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+                dense: true,
+              ),
+              // 🆕 تم تعديل المسافة لتكون بعد الـ Checkbox
+              const SizedBox(height: 10),
+
               Row(
                 children: [
                   Expanded(

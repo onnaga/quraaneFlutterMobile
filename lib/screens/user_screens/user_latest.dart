@@ -265,34 +265,62 @@ class _QuranWidgetState extends State<QuranWidget> {
                     ),
                   ),
                   if (widget.isOnline && widget.userProviderPrivilege != 1)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8.0),
-                      child: _isDeleting
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : ElevatedButton(
-                              onPressed: () => _confirmDelete(context, item),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.redAccent,
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 18, vertical: 6),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                              child: const Text(
-                                'حذف',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                    ),
-                ],
+                    _isDeleting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        :PopupMenuButton<String>(
+  icon: Icon(
+    Icons.more_vert_rounded,
+    color: Colors.grey.shade800,
+    size: 26,
+  ),
+  tooltip: 'خيارات',
+  padding: EdgeInsets.zero,
+  constraints: const BoxConstraints(),
+  color: Colors.white,
+  elevation: 8,
+  shape: RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(16),
+  ),
+  shadowColor: Colors.black.withOpacity(0.1),
+  onSelected: (value) {
+    if (value == 'delete') {
+      _confirmDelete(context, item);
+    }
+  },
+  itemBuilder: (BuildContext context) => [
+    PopupMenuItem<String>(
+      value: 'delete',
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Row(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.redAccent.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            padding: const EdgeInsets.all(6),
+            child: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+          ),
+          const SizedBox(width: 10),
+          const Text(
+            'حذف',
+            style: TextStyle(
+              color: Colors.redAccent,
+              fontWeight: FontWeight.w600,
+              fontSize: 15,
+            ),
+          ),
+        ],
+      ),
+    ),
+    const PopupMenuDivider(height: 6),
+],
+),
+],
               );
             }),
           ],
@@ -451,34 +479,62 @@ class _HadithWidgetState extends State<HadithWidget> {
                   ),
                   // ✅ إضافة زر الحذف بنفس منطق القرآن
                   if (widget.isOnline && widget.userProviderPrivilege != 1)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8.0),
-                      child: _isDeleting
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : ElevatedButton(
-                              onPressed: () => _confirmDelete(context, item),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.redAccent,
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 18, vertical: 6),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                              child: const Text(
-                                'حذف',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                    ),
-                ],
+                    _isDeleting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        :PopupMenuButton<String>(
+  icon: Icon(
+    Icons.more_vert_rounded,
+    color: Colors.grey.shade800,
+    size: 26,
+  ),
+  tooltip: 'خيارات',
+  padding: EdgeInsets.zero,
+  constraints: const BoxConstraints(),
+  color: Colors.white,
+  elevation: 8,
+  shape: RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(16),
+  ),
+  shadowColor: Colors.black.withOpacity(0.1),
+  onSelected: (value) {
+    if (value == 'delete') {
+      _confirmDelete(context, item);
+    }
+  },
+  itemBuilder: (BuildContext context) => [
+    PopupMenuItem<String>(
+      value: 'delete',
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Row(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.redAccent.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            padding: const EdgeInsets.all(6),
+            child: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+          ),
+          const SizedBox(width: 10),
+          const Text(
+            'حذف',
+            style: TextStyle(
+              color: Colors.redAccent,
+              fontWeight: FontWeight.w600,
+              fontSize: 15,
+            ),
+          ),
+        ],
+      ),
+    ),
+    const PopupMenuDivider(height: 6),
+],
+),
+],
               );
             }),
           ],
@@ -623,34 +679,62 @@ class _ActivityWidgetState extends State<ActivityWidget> {
                   ),
                   // ✅ إضافة زر الحذف بنفس منطق القرآن
                   if (widget.isOnline && widget.userProviderPrivilege != 1)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8.0),
-                      child: _isDeleting
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : ElevatedButton(
-                              onPressed: () => _confirmDelete(context, item),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.redAccent,
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 18, vertical: 6),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                              child: const Text(
-                                'حذف',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                    ),
-                ],
+                    _isDeleting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        :PopupMenuButton<String>(
+  icon: Icon(
+    Icons.more_vert_rounded,
+    color: Colors.grey.shade800,
+    size: 26,
+  ),
+  tooltip: 'خيارات',
+  padding: EdgeInsets.zero,
+  constraints: const BoxConstraints(),
+  color: Colors.white,
+  elevation: 8,
+  shape: RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(16),
+  ),
+  shadowColor: Colors.black.withOpacity(0.1),
+  onSelected: (value) {
+    if (value == 'delete') {
+      _confirmDelete(context, item);
+    }
+  },
+  itemBuilder: (BuildContext context) => [
+    PopupMenuItem<String>(
+      value: 'delete',
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Row(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.redAccent.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            padding: const EdgeInsets.all(6),
+            child: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+          ),
+          const SizedBox(width: 10),
+          const Text(
+            'حذف',
+            style: TextStyle(
+              color: Colors.redAccent,
+              fontWeight: FontWeight.w600,
+              fontSize: 15,
+            ),
+          ),
+        ],
+      ),
+    ),
+    const PopupMenuDivider(height: 6),
+],
+),
+],
               );
             })
           else
@@ -988,10 +1072,7 @@ class _InfoCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   // المحتوى
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                    child: child,
-                  ),
+                  child,
                   const SizedBox(height: 12),
                   // ===== التعديل الثاني هنا: استبدال ListTile بـ Row مرن =====
                   Padding(

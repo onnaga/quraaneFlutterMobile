@@ -180,57 +180,78 @@ class _teacherCardState extends State<teacherCard> {
     );
   }
   // ✅ ==================== نهاية التعديل هنا ====================
+Widget _infoRow(IconData icon, String text, {bool isPhone = false}) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 3),
+    child: Row(
+      children: [
+        Icon(icon, size: 18, color: Colors.blueGrey),
+        const SizedBox(width: 6),
+        Expanded(
+          child: isPhone
+              ? InkWell(
+                  onTap: () async {
+                    // 1. استخراج الرقم المحلي من النص
+                    String localPhone = text.split(':').last.trim();
+                    String internationalPhone = '';
 
-  Widget _infoRow(IconData icon, String text, {bool isPhone = false}) {
-    // ... This function remains the same
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: Colors.blueGrey),
-          const SizedBox(width: 6),
-          Expanded(
-            child: isPhone
-                ? InkWell(
-                    onTap: () async {
-                      final phone = text.split(':').last.trim();
-                      final url = Uri.parse("https://wa.me/$phone");
-                      if (await canLaunchUrl(url)) {
-                        await launchUrl(url, mode: LaunchMode.externalApplication);
-                      } else {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("لا يمكن فتح واتساب")),
-                          );
-                        }
+                    // 2. التحويل إلى التنسيق الدولي بناءً على القاعدة
+                    // Regex: (09\d{8}) -> 10 أرقام
+                    if (localPhone.startsWith('09') && localPhone.length == 10) {
+                      internationalPhone = '963${localPhone.substring(1)}'; // -> 9639...
+                    } 
+                    // Regex: (05\d{9}) -> 11 رقم
+                    else if (localPhone.startsWith('05') && localPhone.length == 11) {
+                      internationalPhone = '90${localPhone.substring(1)}'; // -> 905...
+                    } 
+                    else {
+                      // في حال كان الرقم غير مطابق
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("رقم الهاتف غير صالح لفتحه في واتساب")),
+                        );
                       }
-                    },
-                    child: Text(
-                      text,
-                      textAlign: TextAlign.right,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.blue,
-                        fontWeight: FontWeight.bold,
-                        decoration: TextDecoration.underline,
-                      ),
-                    ),
-                  )
-                : Text(
+                      return;
+                    }
+
+                    // 3. إنشاء الرابط بالرقم الدولي
+                    final url = Uri.parse("https://wa.me/$internationalPhone");
+
+                    // 4. محاولة الفتح
+                    if (await canLaunchUrl(url)) {
+                      await launchUrl(url, mode: LaunchMode.externalApplication);
+                    } else {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("لا يمكن فتح واتساب (تأكد من تثبيته)")),
+                        );
+                      }
+                    }
+                  },
+                  child: Text(
                     text,
                     textAlign: TextAlign.right,
                     style: const TextStyle(
                       fontSize: 14,
-                      color: Color(0xFF333333),
+                      color: Colors.blue,
+                      fontWeight: FontWeight.bold,
+                      decoration: TextDecoration.underline,
                     ),
                   ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionButtons(BuildContext context, User user, bool canTogglePrivilege, bool canDeleteAdmin) {
+                )
+              : Text(
+                  text,
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF333333),
+                  ),
+                ),
+        ),
+      ],
+    ),
+  );
+}  Widget _buildActionButtons(BuildContext context, User user, bool canTogglePrivilege, bool canDeleteAdmin) {
     // ... This function remains the same
     if (user.privilege != 3) {
       return const SizedBox.shrink();

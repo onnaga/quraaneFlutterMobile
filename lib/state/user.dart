@@ -55,6 +55,7 @@ class User extends ChangeNotifier {
       'password': password,
     });
 
+print("the $baseUrl ");
     try {
       var response = await dio.post(url, data: formData);
 
@@ -634,6 +635,7 @@ print(jsonEncode(dataToSend));
 print("$dataToSend");
     try {
       final response = await dio.post(url, data: jsonEncode(dataToSend));
+      print('----------------- $response');
       // print('response is $response');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -643,6 +645,7 @@ print("$dataToSend");
         throw Exception(response.data['message'] ?? 'حدث خطأ في الخادم');
       }
     } catch (e) {
+      print(e);
       throw Exception('فشلت الإضافة. يرجى التحقق من اتصالك بالإنترنت.');
     }
   }

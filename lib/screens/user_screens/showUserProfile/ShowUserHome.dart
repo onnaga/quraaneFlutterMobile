@@ -243,18 +243,44 @@ Widget _buildInfoCard({
       ),
       subtitle: isLink
           ? TextButton(
-              onPressed: () async {
-                final phone = value.trim();
-                final url = Uri.parse("https://wa.me/$phone");
-                if (await canLaunchUrl(url)) {
-                  await launchUrl(url, mode: LaunchMode.externalApplication);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("لا يمكن فتح واتساب")),
-                  );
-                }
-              },
-              child: Text(
+          onPressed: () async {
+  // 1. استخراج الرقم المحلي من 'value'
+  String localPhone = value.trim();
+  String internationalPhone = '';
+
+  // 2. التحويل إلى التنسيق الدولي بناءً على القاعدة
+  // Regex: (09\d{8}) -> 10 أرقام
+  if (localPhone.startsWith('09') && localPhone.length == 10) {
+    internationalPhone = '963${localPhone.substring(1)}'; // -> 9639...
+  } 
+  // Regex: (05\d{9}) -> 11 رقم
+  else if (localPhone.startsWith('05') && localPhone.length == 11) {
+    internationalPhone = '90${localPhone.substring(1)}'; // -> 905...
+  } 
+  else {
+    // في حال كان الرقم غير مطابق
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("رقم الهاتف غير صالح لفتحه في واتساب")),
+      );
+    }
+    return;
+  }
+
+  // 3. إنشاء الرابط بالرقم الدولي
+  final url = Uri.parse("https://wa.me/$internationalPhone");
+
+  // 4. محاولة الفتح
+  if (await canLaunchUrl(url)) {
+    await launchUrl(url, mode: LaunchMode.externalApplication);
+  } else {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("لا يمكن فتح واتساب (تأكد من تثبيته)")),
+      );
+    }
+  }
+}, child: Text(
                 value,
                 style: const TextStyle(
                   color: Colors.blue,
