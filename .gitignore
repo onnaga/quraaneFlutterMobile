@@ -43,3 +43,5 @@ app.*.map.json
 /android/app/release
 ".env" 
 "android/app/halakate-1c474-firebase-adminsdk-fbsvc-370eb6294c.json" 
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
