@@ -1,17 +1,11 @@
 import 'dart:convert';
-
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:masjed/models/objects.dart';
-
 import 'package:shared_preferences/shared_preferences.dart';
+import 'services/profile_service.dart';
 
 class Profile extends ChangeNotifier {
-// String? baseUrl = "http://192.168.1.5:8000/api/";
-// String? baseUrl = "http://127.0.0.1:8000/api/";
-
-    String? baseUrl = dotenv.env['BASE_URL'];
+  final ProfileService _profileService = ProfileService();
 
   int q_points = 0;
   int h_points = 0;
@@ -24,17 +18,13 @@ class Profile extends ChangeNotifier {
   List<dynamic>? StudetntsWithoutTeachers;
   List<dynamic>? TeachersList;
   List<OneUserRank>? RankUsers;
+  List<HalakaRank>? RankHalakas;
   List<TestData>? TestsList;
   List<TestUserAccepters> TestUseraccepters = [];
   List<TestUserAccepters> success_users = [];
   List<TestUserAccepters> fail_users = [];
   List<dynamic>? ended_parts;
   List<User_Notification>? notifications;
-
-  final Dio dio = Dio(BaseOptions(headers: {
-    'content-Type': 'application/json',
-    'Accept': 'application/json'
-  }));
 
   void resetDataForUserReport() {
     q_points = 0;
@@ -47,277 +37,141 @@ class Profile extends ChangeNotifier {
     notifyListeners();
   }
 
+  int parseInt(dynamic val) => int.tryParse(val?.toString() ?? '') ?? 0;
+
   Future<Map<String, dynamic>> get_score(int privilege, int userId) async {
-    try {
-      final preferences = await SharedPreferences.getInstance();
-      final token = preferences.getString('token');
+    final preferences = await SharedPreferences.getInstance();
+    final token = preferences.getString('token');
 
-      if (token == null || token == "null") {
-        // ✅ إرجاع خطأ بدلاً من التعامل مع الواجهة
-        return {'success': false, 'message': 'المستخدم غير مسجل دخوله'};
-      }
-
-      dio.options.headers["authorization"] = "Bearer $token";
-
-      final url = '${baseUrl}get_score';
-      final formData = (privilege == 2 || privilege == 3 || privilege == 4)
-          ? FormData.fromMap({'id': userId})
-          : null;
-
-      final response = await dio.post(
-        url,
-        data: formData,
-        options: Options(validateStatus: (_) => true),
-      );
-
-      if (response.statusCode == 500) {
-        // ✅ إرجاع رسالة الخطأ
-        return {'success': false, 'message': 'مشكلة في الخادم'};
-      }
-
-      if (response.statusCode == 401) {
-        final msg = response.data['message']?.toString() ?? "غير مصرح";
-        // ✅ إرجاع رسالة الخطأ
-        return {'success': false, 'message': msg};
-      }
-
-      // --- منطق النجاح ---
-      final points = response.data['points'];
-      int parseInt(dynamic val) => int.tryParse(val?.toString() ?? '') ?? 0;
-
-      q_points = parseInt(points?['q_points']);
-      h_points = parseInt(points?['h_points']);
-      a_points = parseInt(points?['a_points']);
-      l_points = parseInt(points?['l_points']);
-
-      total_points = q_points + h_points + a_points - l_points;
-      missing_days = parseInt(response.data['missing_days']);
-      ended_parts = jsonDecode(
-        response.data['ended_quraan_in_aukaf'] ?? "[]",
-      );
-
-      // print("get score: total=$total_points, missing=$missing_days");
-      // ✅ إرجاع نتيجة النجاح
-      return {'success': true, 'message': 'تمت عملية جلب البيانات'};
-    } catch (e, st) {
-      debugPrint("Error in get_score: $e\n$st");
-      // ✅ إرجاع خطأ عام
-      return {'success': false, 'message': 'حدث خطأ غير متوقع'};
+    if (token == null || token == "null") {
+      return {'success': false, 'message': 'المستخدم غير مسجل دخوله'};
     }
+
+    final result = await _profileService.fetchScore(privilege, userId, token);
+
+    if (result['success'] == true) {
+      q_points = result['q_points'] ?? 0;
+      h_points = result['h_points'] ?? 0;
+      a_points = result['a_points'] ?? 0;
+      l_points = result['l_points'] ?? 0;
+      total_points = q_points + h_points + a_points - l_points;
+      missing_days = result['missing_days'] ?? 0;
+      ended_parts = result['ended_parts'];
+      notifyListeners();
+    }
+
+    return result;
   }
-// ✅ النسخة المُحسّنة: تُرجع الكائن مباشرة أو null عند الفشل
-Future<reciveLatest?> get_Latest(int privilege, int userId) async {
-  try {
-    SharedPreferences preferences = await SharedPreferences.getInstance();
+
+  Future<reciveLatest?> get_Latest(int privilege, int userId) async {
+    final preferences = await SharedPreferences.getInstance();
     String? token = preferences.getString('token');
 
-    if (token == "null") {
+    if (token == null || token == "null") {
       throw Exception('المستخدم غير مسجل دخوله');
     }
 
-    dio.options.headers["authorization"] = "Bearer $token";
-
-    String url = (privilege == 2 || privilege == 3)
-        ? '${baseUrl}get_latest_for_student?user_id=$userId'
-        : '${baseUrl}get_latest_for_student';
-
-    var response = await dio.get(url);
-
-    if (response.statusCode == 200) {
-      // ✅ أولاً: تأكد أن البيانات مفكوكة JSON
-      dynamic data = response.data;
-
-      // أحياناً الخادم يرجعها كنص JSON وليس كـ List
-      if (data is String) {
-        data = jsonDecode(data);
-      }
-
-      if (data == null || data.isEmpty) {
-        return null;
-      }
-
-      // ✅ الآن أنشئ الكائن بشكل صحيح
-      recivelatest = reciveLatest.fromJson(data[0]);
-      return recivelatest;
-    } else {
-      throw Exception('فشل في جلب البيانات من الخادم');
-    }
-  } catch (e) {
-    debugPrint("Error in get_Latest: $e");
-    return null;
+    recivelatest = await _profileService.fetchLatest(privilege, userId, token);
+    notifyListeners();
+    return recivelatest;
   }
-}
 
-// ✅ تم تمرير daoraId كمتغير بدلاً من استدعاء Provider هنا
   Future<Map<String, dynamic>> get_rank(bool global, int daoraId) async {
-    try {
-      SharedPreferences preferences = await SharedPreferences.getInstance();
-      String? token = preferences.getString('token');
-
-      if (token == "null") {
-        return {'success': false, 'message': 'المستخدم غير مسجل دخوله'};
-      }
-
-      dio.options.headers["authorization"] = "Bearer $token";
-
-      var url =
-          global ? '${baseUrl}get_rank_masjed' : '${baseUrl}get_rank_my_group';
-
-      var response = await dio.get(
-        url,
-        queryParameters: global ? {'daora_id': daoraId} : null,
-        options: Options(validateStatus: (i) => true),
-      );
-
-      if (response.statusCode == 500) {
-        // print(response);
-        return {'success': false, 'message': 'مشكلة في الخادم'};
-      }
-
-      if (response.statusCode == 401) {
-        return {'success': false, 'message': response.data['message']};
-      }
-
-      // --- منطق النجاح ---
-      RankUsers = [];
-      response.data.forEach((item) {
-        RankUsers!.add(OneUserRank.fromJson(item));
-      });
-      RankUsers!.sort((a, b) => b.points.compareTo(a.points));
-
-      // print("get Rank");
-      return {'success': true};
-    } catch (e, st) {
-      debugPrint("Error in get_rank: $e\n$st");
-      return {'success': false, 'message': 'حدث خطأ غير متوقع'};
-    }
-  }
-// (نفترض أن هذا الملف هو profile.dart أو ما شابه)
-
-Future<bool> add_wanting_students(List<int> watingStudents, bool isGlobal) async {
-  SharedPreferences preferences = await SharedPreferences.getInstance();
-  String? token = preferences.getString('token');
-  if (token == "null") {
-    throw Exception('جلسة المستخدم منتهية، يرجى تسجيل الدخول مرة أخرى.');
-  }
-
-  dio.options.headers["authorization"] = "Bearer $token";
-  var url = '${baseUrl}add_wanting_students';
-print('request url :  $baseUrl') ;
-
-  // --- التعديل هنا ---
-  // 1. قم بإنشاء كائن Map ليحمل كل البيانات
-  Map<String, dynamic> requestData = {
-    'students': watingStudents, // قائمة الطلاب
-    'glob': isGlobal           // المتغير البوليان
-  };
-  // --- نهاية التعديل ---
-print('requestData  :  $requestData') ;
-  try {
-    // 2. أرسل الـ Map مباشرة. Dio ستقوم بتحويله إلى JSON
-    var response = await dio.post(url, data: requestData);
-print(response);
-    // ... باقي الكود الخاص بك للتحقق من response.statusCode ...
-    if (response.statusCode == 500) {
-       throw Exception('حدثت مشكلة في الخادم، يرجى المحاولة لاحقاً.');
-    }
-    if (response.statusCode == 401 || response.statusCode == 403) { // 403 هو الرمز الذي أرسلته أنت
-       throw Exception(
-           response.data['message'] ?? 'غير مصرح لك بالقيام بهذه العملية.');
-    }
-    if (response.statusCode != 200 && response.statusCode != 201) {
-       throw Exception('فشلت العملية، رمز الخطأ: ${response.statusCode}');
-    }
-
-    return true;
-  } catch (e) {
-    print(e);
-    // ... باقي معالجة الأخطاء ...
-    throw Exception(e.toString().contains('SocketException')
-        ? 'فشل الاتصال بالخادم، تحقق من اتصالك بالإنترنت.'
-        : e.toString());
-  }
-}  Future<List<TestData>> get_tests(int daoraId) async {
-    SharedPreferences preferences = await SharedPreferences.getInstance();
+    final preferences = await SharedPreferences.getInstance();
     String? token = preferences.getString('token');
 
-    if (token == "null") {
+    if (token == null || token == "null") {
+      return {'success': false, 'message': 'المستخدم غير مسجل دخوله'};
+    }
+
+    final result = await _profileService.fetchRank(global, daoraId, token);
+
+    RankUsers = [];
+    RankHalakas = [];
+
+    if (result['success'] == true) {
+      RankUsers = result['rankUsers'];
+      RankHalakas = result['rankHalakas'];
+      notifyListeners();
+    }
+
+    return result;
+  }
+
+  Future<bool> update_halaka_name(int halakaId, String name) async {
+    final preferences = await SharedPreferences.getInstance();
+    String? token = preferences.getString('token');
+
+    if (token == null || token == "null") return false;
+
+    bool success =
+        await _profileService.updateHalakaName(halakaId, name, token);
+    if (success && RankHalakas != null) {
+      int index = RankHalakas!.indexWhere((h) => h.id == halakaId);
+      if (index != -1) {
+        RankHalakas![index].halaka_name = name;
+        notifyListeners();
+      }
+    }
+    return success;
+  }
+
+  Future<bool> change_halaka_teacher(int halakaId, int newTeacherId) async {
+    final preferences = await SharedPreferences.getInstance();
+    String? token = preferences.getString('token');
+
+    if (token == null || token == "null") return false;
+
+    return await _profileService.changeHalakaTeacher(
+        halakaId, newTeacherId, token);
+  }
+
+  Future<bool> add_wanting_students(
+      List<int> watingStudents, bool isGlobal) async {
+    final preferences = await SharedPreferences.getInstance();
+    String? token = preferences.getString('token');
+
+    if (token == null || token == "null") {
       throw Exception('جلسة المستخدم منتهية، يرجى تسجيل الدخول مرة أخرى.');
     }
 
-    dio.options.headers["authorization"] = "Bearer $token";
-    var url = '${baseUrl}show_tests?daora_id=$daoraId';
+    return await _profileService.addWantingStudents(
+        watingStudents, isGlobal, token);
+  }
 
-    try {
-      var response = await dio.get(url);
+  Future<bool> deleteHalaka(int halakaId) async {
+    final preferences = await SharedPreferences.getInstance();
+    String? token = preferences.getString('token');
 
-      if (response.statusCode == 500) {
-        throw Exception('حدثت مشكلة في الخادم، يرجى المحاولة لاحقاً.');
-      }
-      if (response.statusCode == 401) {
-        throw Exception(
-            response.data['message'] ?? 'غير مصرح لك بالقيام بهذه العملية.');
-      }
+    if (token == null || token == "null") return false;
 
-      // معالجة البيانات وإرجاعها
-      List<TestData> testsList = [];
-      response.data['tests'].forEach((item) {
-        testsList.add(TestData.fromJson(item));
-      });
+    return await _profileService.deleteHalaka(halakaId, token);
+  }
 
-      List registered = response.data['registered_tests'];
-      await preferences.setStringList(
-        "registered_tests",
-        registered.map((e) => e.toString()).toList(),
-      );
+  Future<List<TestData>> get_tests(int daoraId) async {
+    final preferences = await SharedPreferences.getInstance();
+    String? token = preferences.getString('token');
 
-      // تحديث القائمة في الـ Provider
-      TestsList = testsList;
-
-      return testsList;
-    } catch (e) {
-      throw Exception(e.toString().contains('SocketException')
-          ? 'فشل الاتصال بالخادم، تحقق من اتصالك بالإنترنت.'
-          : e.toString());
+    if (token == null || token == "null") {
+      throw Exception('جلسة المستخدم منتهية، يرجى تسجيل الدخول مرة أخرى.');
     }
+
+    TestsList = await _profileService.getTests(daoraId, token);
+    notifyListeners();
+    return TestsList ?? [];
   }
 
   Future<List<TestUserAccepters>> show_test_accepters(int testId) async {
-    SharedPreferences preferences = await SharedPreferences.getInstance();
+    final preferences = await SharedPreferences.getInstance();
     String? token = preferences.getString('token');
 
-    if (token == "null") {
+    if (token == null || token == "null") {
       throw Exception('جلسة المستخدم منتهية، يرجى تسجيل الدخول مرة أخرى.');
     }
 
-    dio.options.headers["authorization"] = "Bearer $token";
-    var url = '${baseUrl}show_test_accepters/$testId';
-
-    try {
-      var response = await dio.get(url);
-
-      if (response.statusCode == 500) {
-        throw Exception('حدثت مشكلة في الخادم، يرجى المحاولة لاحقاً.');
-      }
-      if (response.statusCode == 401) {
-        throw Exception(
-            response.data['message'] ?? 'غير مصرح لك بالقيام بهذه العملية.');
-      }
-
-      List<TestUserAccepters> userAccepters = [];
-      response.data.forEach((item) {
-        userAccepters.add(TestUserAccepters.fromJson(item));
-      });
-
-      // تحديث القائمة في الـ Provider
-      TestUseraccepters = userAccepters;
-
-      return userAccepters;
-    } catch (e) {
-      throw Exception(e.toString().contains('SocketException')
-          ? 'فشل الاتصال بالخادم، تحقق من اتصالك بالإنترنت.'
-          : e.toString());
-    }
+    TestUseraccepters = await _profileService.showTestAccepters(testId, token);
+    notifyListeners();
+    return TestUseraccepters;
   }
 
   Future<bool> update_test_accepter_data(
@@ -327,57 +181,21 @@ print(response);
       List<int> thePartToTestIn,
       String rating,
       String notes) async {
-    SharedPreferences preferences = await SharedPreferences.getInstance();
+    final preferences = await SharedPreferences.getInstance();
     String? token = preferences.getString('token');
 
-    if (token == "null") {
-      return false;
-    }
+    if (token == null || token == "null") return false;
 
-    var url = '${baseUrl}update_test_accepter_data/$testId/$userId';
-    var formData = FormData.fromMap({
-      'the_part_to_test_in': thePartToTestIn.toString(),
-      'rating': rating.toString(),
-      'notes': notes,
-    });
-    var response = await dio.post(url, data: formData,
-        options: Options(validateStatus: (i) {
-      return true;
-    }));
+    final result = await _profileService.updateTestAccepterData(
+        testId, userId, thePartToTestIn, rating, notes, token);
 
-    if (response.statusCode == 500) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('مشكلة في الخادم'),
-        backgroundColor: Color.fromARGB(255, 175, 79, 76),
-      ));
-      return false;
-    }
-    if (response.statusCode == 401) {
-      // print(response.data);
+    if (result['success'] == false) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(response.data['message']),
+        content: Text(result['message'] ?? 'خطأ'),
         backgroundColor: const Color.fromARGB(255, 175, 79, 76),
       ));
       return false;
     }
-    try {
-      if (response.data.substring(0, 30) ==
-          'SQLSTATE[22007]: Invalid datetime format: 1366 Incorrect integer value: '
-              .substring(0, 30)) {
-        // print(response.data);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text("أدخل رقما من 1 إلى 100 في خانة التقييم"),
-          backgroundColor: Color.fromARGB(255, 175, 79, 76),
-        ));
-        return false;
-      }
-    } catch (e) {
-      //if response data is not string it will throw exception there we catch it
-
-      // print(response.data);
-    }
-
-    // print("update data to Accepter test");
 
     return true;
   }
@@ -389,418 +207,168 @@ print(response);
     String rating,
     String notes,
   ) async {
-    SharedPreferences preferences = await SharedPreferences.getInstance();
+    final preferences = await SharedPreferences.getInstance();
     String? token = preferences.getString('token');
 
-    if (token == "null") {
+    if (token == null || token == "null") {
       throw Exception('جلسة المستخدم منتهية، يرجى تسجيل الدخول مرة أخرى.');
     }
 
-    var url = '${baseUrl}update_aukaf_tests_after_the_test/$testId/$userId';
-
-    try {
-      var response = await dio.post(
-        url,
-        data: {
-          'the_part_to_test_in': thePartToTestIn,
-          'rating': rating,
-          'notes': notes,
-        },
-        options: Options(
-          headers: {
-            "Authorization": "Bearer $token",
-            "Content-Type": "application/json"
-          },
-        ),
-      );
-
-      if (response.statusCode == 500) {
-        // تحقق من الخطأ المحدد
-        if (response.data is String &&
-            response.data.toString().contains('SQLSTATE[22007]')) {
-          throw Exception("أدخل التاريخ بصيغة صحيحة.");
-        }
-        throw Exception('حدثت مشكلة في الخادم، يرجى المحاولة لاحقاً.');
-      }
-      if (response.statusCode == 401) {
-        throw Exception(
-            response.data['message'] ?? 'غير مصرح لك بالقيام بهذه العملية.');
-      }
-
-      // print("✅ update data to Aukaf test done");
-      return response.statusCode == 200 && response.data['status'] == 'success';
-    } catch (e) {
-      throw Exception(e.toString().contains('SocketException')
-          ? 'فشل الاتصال بالخادم، تحقق من اتصالك بالإنترنت.'
-          : e.toString());
-    }
+    return await _profileService.updateAukafTestsAfterTest(
+        testId, userId, thePartToTestIn, rating, notes, token);
   }
 
   Future<Map<String, List<TestUserAccepters>>> show_success_students_in_test(
       int testId) async {
-    SharedPreferences preferences = await SharedPreferences.getInstance();
+    final preferences = await SharedPreferences.getInstance();
     String? token = preferences.getString('token');
 
-    if (token == "null") {
+    if (token == null || token == "null") {
       throw Exception('جلسة المستخدم منتهية، يرجى تسجيل الدخول مرة أخرى.');
     }
 
-    dio.options.headers["authorization"] = "Bearer $token";
-    var url = '${baseUrl}show_success_students_in_test/$testId';
+    final result =
+        await _profileService.showSuccessStudentsInTest(testId, token);
 
-    try {
-      var response = await dio.get(url);
+    success_users = result['success_users'] ?? [];
+    fail_users = result['fail_users'] ?? [];
+    notifyListeners();
 
-      if (response.statusCode == 500) {
-        throw Exception('حدثت مشكلة في الخادم، يرجى المحاولة لاحقاً.');
-      }
-      if (response.statusCode == 401) {
-        throw Exception(
-            response.data['message'] ?? 'غير مصرح لك بالقيام بهذه العملية.');
-      }
-
-      // معالجة البيانات وإرجاعها
-      List<TestUserAccepters> successUsers = [];
-      List<TestUserAccepters> failUsers = [];
-
-      response.data['success_users'].forEach((item) {
-        successUsers.add(TestUserAccepters.fromJson(item));
-      });
-
-      response.data['fail_users'].forEach((item) {
-        failUsers.add(TestUserAccepters.fromJson(item));
-      });
-
-      // تحديث الحالة الداخلية للـ Provider
-      success_users = successUsers;
-      fail_users = failUsers;
-
-      // print("get Success/fail users");
-
-      return {
-        'success_users': successUsers,
-        'fail_users': failUsers,
-      };
-    } catch (e) {
-      throw Exception('فشل الاتصال بالخادم، تحقق من اتصالك بالإنترنت.');
-    }
+    return result;
   }
 
   Future<bool> take_student(int userId) async {
-    SharedPreferences preferences = await SharedPreferences.getInstance();
+    final preferences = await SharedPreferences.getInstance();
     String? token = preferences.getString('token');
 
-    if (token == "null") {
+    if (token == null || token == "null") {
       throw Exception('جلسة المستخدم منتهية، يرجى تسجيل الدخول مرة أخرى.');
     }
 
-    dio.options.headers["authorization"] = "Bearer $token";
-    var url = '${baseUrl}take_student?user_id=$userId';
-
-    try {
-      var response = await dio.get(url);
-
-      if (response.statusCode == 500) {
-        throw Exception('حدثت مشكلة في الخادم، يرجى المحاولة لاحقاً.');
-      }
-      if (response.statusCode == 401) {
-        throw Exception(
-            response.data['message'] ?? 'غير مصرح لك بالقيام بهذه العملية.');
-      }
-
-      // print("Student taken successfully");
-      return true;
-    } catch (e) {
-      throw Exception('فشل الاتصال بالخادم، تحقق من اتصالك بالإنترنت.');
-    }
+    return await _profileService.takeStudent(userId, token);
   }
 
   Future<bool> delete_test(int testId) async {
-    SharedPreferences preferences = await SharedPreferences.getInstance();
+    final preferences = await SharedPreferences.getInstance();
     String? token = preferences.getString('token');
 
-    if (token == "null") {
+    if (token == null || token == "null") {
       throw Exception('جلسة المستخدم منتهية، يرجى تسجيل الدخول مرة أخرى.');
     }
 
-    dio.options.headers["authorization"] = "Bearer $token";
-    var url = '${baseUrl}delete_test/$testId';
-
-    try {
-      var response = await dio.delete(url);
-
-      if (response.statusCode == 500) {
-        throw Exception('حدثت مشكلة في الخادم، يرجى المحاولة لاحقاً.');
-      }
-      if (response.statusCode == 401) {
-        throw Exception(
-            response.data['message'] ?? 'غير مصرح لك بالقيام بهذه العملية.');
-      }
-
-      // print("delete test");
-      return true;
-    } catch (e) {
-      throw Exception('فشل الاتصال بالخادم، تحقق من اتصالك بالإنترنت.');
-    }
-  }
-Future<bool> add_new_test(String at, String notes, bool isAukaf, int daoraId) async {
-  SharedPreferences prefs = await SharedPreferences.getInstance();
-  String? token = prefs.getString('token');
-
-  if (token == "null") {
-    throw Exception('جلسة المستخدم منتهية، يرجى تسجيل الدخول مرة أخرى.');
+    return await _profileService.deleteTest(testId, token);
   }
 
-  final url = '${baseUrl}add_new_test';
-  final formData = FormData.fromMap({
-    'End_time': at,
-    'notes': notes,
-    'aukaf': isAukaf ? 1 : 0,
-    'daora_id': daoraId,
-  });
+  Future<bool> add_new_test(
+      String at, String notes, bool isAukaf, int daoraId) async {
+    final preferences = await SharedPreferences.getInstance();
+    String? token = preferences.getString('token');
 
-  try {
-    final response = await dio.post(
-      url,
-      data: formData,
-      options: Options(
-        headers: {'Authorization': 'Bearer $token'},
-        // ✅ السماح لـ dio باستقبال كل رموز الحالة دون رمي خطأ تلقائي
-        validateStatus: (status) {
-          return status != null && status < 500; // اعتبر أي شيء تحت 500 قابلاً للمعالجة
-        },
-      ),
-    );
-
-    // print("Response from addNewTest: ${response.statusCode} -> ${response.data}");
-
-    // ✅ التعامل مع كل حالة على حدة
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return true; // نجاح
-    } else {
-      // إذا لم يكن نجاحاً، ارمِ الرسالة القادمة من الـ Backend مباشرة
-      throw Exception(response.data['message'] ?? 'حدثت مشكلة غير معروفة');
+    if (token == null || token == "null") {
+      throw Exception('جلسة المستخدم منتهية، يرجى تسجيل الدخول مرة أخرى.');
     }
-  } on DioException catch (e) {
-    // ✅ معالجة أخطاء dio (مثل انقطاع الإنترنت أو خطأ 500 من الخادم)
-    if (e.response != null) {
-      // إذا كان هناك استجابة من الخادم ولكن برمز خطأ (500)
-      throw Exception(e.response!.data['message'] ?? 'حدث خطأ في الخادم، يرجى المحاولة لاحقاً');
-    } else {
-      // إذا لم يكن هناك استجابة (مشكلة شبكة)
-      throw Exception('فشل الاتصال بالخادم، تحقق من اتصالك بالإنترنت.');
-    }
-  } catch (e) {
-    // معالجة أي أخطاء أخرى غير متوقعة
-    throw Exception('حدث خطأ غير متوقع: ${e.toString()}');
+
+    return await _profileService.addNewTest(at, notes, isAukaf, daoraId, token);
   }
-}  Future<bool> make_aukaf_test_for_success_students(
+
+  Future<bool> make_aukaf_test_for_success_students(
       int testId, String at, String notes) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? token = prefs.getString('token');
+    final preferences = await SharedPreferences.getInstance();
+    String? token = preferences.getString('token');
 
-    if (token == "null") {
+    if (token == null || token == "null") {
       throw Exception('جلسة المستخدم منتهية، يرجى تسجيل الدخول مرة أخرى.');
     }
 
-    final url = '${baseUrl}make_aukaf_test_for_success_students/$testId';
-    final formData = FormData.fromMap({
-      'End_time': at,
-      'notes': notes,
-    });
-
-    try {
-      final response = await dio.post(
-        url,
-        data: formData,
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
-      );
-
-      // print("response makeAukafTest: ${response.data}");
-
-      if (response.statusCode == 500) {
-        throw Exception('حدثت مشكلة في الخادم، يرجى المحاولة لاحقاً.');
-      }
-      if (response.statusCode == 401) {
-        throw Exception(
-            response.data['message'] ?? 'غير مصرح لك بالقيام بهذه العملية.');
-      }
-
-      return response.statusCode == 200 || response.statusCode == 201;
-    } catch (e) {
-      throw Exception('فشل الاتصال بالخادم، تحقق من اتصالك بالإنترنت.');
-    }
+    return await _profileService.makeAukafTestForSuccessStudents(
+        testId, at, notes, token);
   }
 
   Future<bool> accept_test(int testId) async {
-    SharedPreferences preferences = await SharedPreferences.getInstance();
+    final preferences = await SharedPreferences.getInstance();
     String? token = preferences.getString('token');
 
-    if (token == "null") {
+    if (token == null || token == "null") {
       throw Exception('جلسة المستخدم منتهية، يرجى تسجيل الدخول مرة أخرى.');
     }
 
-    dio.options.headers["authorization"] = "Bearer $token";
-    var url = '${baseUrl}accept_test/$testId';
+    return await _profileService.acceptTest(testId, token);
+  }
 
-    try {
-      var response = await dio.get(url);
-      // print('response $response');
+  Future<bool> accept_test_for_student(int testId, int studentId) async {
+    final preferences = await SharedPreferences.getInstance();
+    String? token = preferences.getString('token');
 
-      if (response.statusCode == 500) {
-        throw Exception('حدثت مشكلة في الخادم، يرجى المحاولة لاحقاً.');
-      }
-      if (response.statusCode == 401) {
-        throw Exception(
-            response.data['message'] ?? 'غير مصرح لك بالقيام بهذه العملية.');
-      }
-
-      // print("accept test");
-      return true;
-    } catch (e) {
-      throw Exception('فشل الاتصال بالخادم، تحقق من اتصالك بالإنترنت.');
+    if (token == null || token == "null") {
+      throw Exception('جلسة المستخدم منتهية، يرجى تسجيل الدخول مرة أخرى.');
     }
+
+    return await _profileService.acceptTestForStudent(testId, studentId, token);
   }
 
   Future<bool> delete_accepted_test(int testId) async {
-    SharedPreferences preferences = await SharedPreferences.getInstance();
+    final preferences = await SharedPreferences.getInstance();
     String? token = preferences.getString('token');
 
-    if (token == "null") {
+    if (token == null || token == "null") {
       throw Exception('جلسة المستخدم منتهية، يرجى تسجيل الدخول مرة أخرى.');
     }
 
-    dio.options.headers["authorization"] = "Bearer $token";
-    var url = '${baseUrl}delete_accepted_test/$testId';
+    return await _profileService.deleteAcceptedTest(testId, token);
+  }
 
-    try {
-      var response = await dio.delete(url);
+  Future<bool> delete_accepted_test_for_student(
+      int testId, int studentId) async {
+    final preferences = await SharedPreferences.getInstance();
+    String? token = preferences.getString('token');
 
-      if (response.statusCode == 500) {
-        throw Exception('حدثت مشكلة في الخادم، يرجى المحاولة لاحقاً.');
-      }
-      if (response.statusCode == 401) {
-        throw Exception(
-            response.data['message'] ?? 'غير مصرح لك بالقيام بهذه العملية.');
-      }
-
-      // print("delete_accepted_test");
-      return true;
-    } catch (e) {
-      throw Exception('فشل الاتصال بالخادم، تحقق من اتصالك بالإنترنت.');
+    if (token == null || token == "null") {
+      throw Exception('جلسة المستخدم منتهية، يرجى تسجيل الدخول مرة أخرى.');
     }
+
+    return await _profileService.deleteAcceptedTestForStudent(
+        testId, studentId, token);
   }
 
   Future<List<dynamic>> show_reports() async {
-    SharedPreferences preferences = await SharedPreferences.getInstance();
+    final preferences = await SharedPreferences.getInstance();
     String? token = preferences.getString('token');
 
-    if (token == "null") {
+    if (token == null || token == "null") {
       throw Exception('جلسة المستخدم منتهية، يرجى تسجيل الدخول مرة أخرى.');
     }
 
-    dio.options.headers["authorization"] = "Bearer $token";
-    var url = '${baseUrl}show_reports';
-
-    try {
-      var response = await dio.get(url);
-
-      if (response.statusCode == 500) {
-        throw Exception('حدثت مشكلة في الخادم، يرجى المحاولة لاحقاً.');
-      }
-      if (response.statusCode == 401) {
-        throw Exception(
-            response.data['message'] ?? 'غير مصرح لك بالقيام بهذه العملية.');
-      }
-
-      // print('response is $response');
-      ReportsList = response.data; // تحديث الحالة الداخلية
-      return response.data; // إرجاع البيانات
-    } catch (e) {
-      throw Exception('فشل الاتصال بالخادم، تحقق من اتصالك بالإنترنت.');
-    }
+    ReportsList = await _profileService.showReports(token);
+    notifyListeners();
+    return ReportsList ?? [];
   }
 
   Future<List<Map<String, dynamic>>> show_users_without_teacher(
       int daoraId) async {
-    SharedPreferences preferences = await SharedPreferences.getInstance();
+    final preferences = await SharedPreferences.getInstance();
     String? token = preferences.getString('token');
-    // print('token is: $token');
 
-    if (token == "null") {
+    if (token == null || token == "null") {
       throw Exception('جلسة المستخدم منتهية، يرجى تسجيل الدخول مرة أخرى.');
     }
 
-    try {
-      var url = '${baseUrl}show_users_without_teacher';
-      var response = await dio.get(
-        url,
-        queryParameters: {"daora_id": daoraId},
-        options: Options(headers: {"Authorization": "Bearer $token"}),
-      );
-
-      if (response.statusCode == 500) {
-        throw Exception('حدثت مشكلة في الخادم، يرجى المحاولة لاحقاً.');
-      }
-      if (response.statusCode == 401) {
-        throw Exception(
-            response.data['message'] ?? 'غير مصرح لك بالقيام بهذه العملية.');
-      }
-
-      if (response.statusCode == 200) {
-        final List<Map<String, dynamic>> students = (response.data as List)
-            .map((s) => {
-                  'user_id': s['user_id'],
-                  'ended_quraan_in_aukaf': s['ended_quraan_in_aukaf'],
-                  'name': s['name'],
-                  'phone_number': s['phone_number'],
-                  'age': s['age'],
-                })
-            .toList();
-
-        StudetntsWithoutTeachers = students; // تحديث الحالة الداخلية
-        return students; // إرجاع البيانات
-      } else {
-        throw Exception('فشل جلب البيانات، رمز الخطأ: ${response.statusCode}');
-      }
-    } catch (e) {
-      // print("Error fetching users without teacher: $e");
-      throw Exception('فشل الاتصال بالخادم، تحقق من اتصالك بالإنترنت.');
-    }
+    StudetntsWithoutTeachers =
+        await _profileService.showUsersWithoutTeacher(daoraId, token);
+    notifyListeners();
+    return StudetntsWithoutTeachers as List<Map<String, dynamic>>;
   }
 
   Future<List<dynamic>> get_teachers(int? daoraId) async {
-    SharedPreferences preferences = await SharedPreferences.getInstance();
+    final preferences = await SharedPreferences.getInstance();
     String? token = preferences.getString('token');
 
-    if (token == "null") {
+    if (token == null || token == "null") {
       throw Exception('جلسة المستخدم منتهية، يرجى تسجيل الدخول مرة أخرى.');
     }
 
-    dio.options.headers["authorization"] = "Bearer $token";
-    var url = '${baseUrl}show_all_teachers';
-
-    try {
-      var response = await dio.post(
-        url,
-        data: {"daora_id": daoraId},
-      );
-
-      // print('response in get teachers is : $response');
-
-      if (response.statusCode == 500) {
-        throw Exception('حدثت مشكلة في الخادم، يرجى المحاولة لاحقاً.');
-      }
-      if (response.statusCode == 401) {
-        throw Exception(
-            response.data['message'] ?? 'غير مصرح لك بالقيام بهذه العملية.');
-      }
-
-      TeachersList = response.data; // تحديث الحالة الداخلية
-      return response.data; // إرجاع البيانات
-    } catch (e) {
-      throw Exception('فشل الاتصال بالخادم، تحقق من اتصالك بالإنترنت.');
-    }
+    TeachersList = await _profileService.getTeachers(daoraId, token);
+    notifyListeners();
+    return TeachersList ?? [];
   }
 
   Future<Map<String, dynamic>> updateUserData({
@@ -808,13 +376,9 @@ Future<bool> add_new_test(String at, String notes, bool isAukaf, int daoraId) as
     required String name,
     required String phone,
     required int age,
-
     List<int>? chapters,
   }) async {
-
-    var url = '${baseUrl}update_user/$userId';
-
-    final data = {
+    Map<String, dynamic> data = {
       'name': name,
       'phone_number': phone,
       'age': age.toString(),
@@ -824,37 +388,7 @@ Future<bool> add_new_test(String at, String notes, bool isAukaf, int daoraId) as
       data['ended_quraan_in_aukaf'] = jsonEncode(chapters);
     }
 
-    var formData = FormData.fromMap(data);
-
-    try {
-      var response = await dio.post(url, data: formData);
-
-      // print('response is : $response');
-
-      if (response.statusCode == 200) {
-        return {'success': true, 'message': 'تم تحديث البيانات بنجاح ✅'};
-      }
-      // معالجة باقي الأخطاء كرسائل فشل
-      else if (response.statusCode == 500) {
-        return {'success': false, 'message': 'حدث خطأ داخلي في الخادم'};
-      } else if (response.statusCode == 403 || response.statusCode == 400) {
-        return {
-          'success': false,
-          'message': response.data['messages'] ?? 'فشل تحديث البيانات'
-        };
-      } else {
-        return {
-          'success': false,
-          'message': 'فشل التحديث، رمز الحالة: ${response.statusCode}'
-        };
-      }
-    } catch (e) {
-      // print('e is : $e');
-      return {
-        'success': false,
-        'message': 'تعذر الاتصال بالخادم، تحقق من الإنترنت'
-      };
-    }
+    return await _profileService.updateUserData(userId, data);
   }
 
   get_ended_parts() async {

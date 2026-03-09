@@ -43,7 +43,7 @@ class UserToShowProfile {
   String? job_name;
   String? family_status;
   // ✅ هذا الحقل سيمثل "مكان السكن" القادم من address
-  String? region; 
+  String? region;
 
   UserToShowProfile({
     required this.id,
@@ -62,18 +62,16 @@ class UserToShowProfile {
       name: json['name'] ?? '',
       phone_number: json['phone_number'] ?? '',
       age: json['age'] ?? 0,
-      ended_quraan: json['ended_quraan'] != null
-          ? List.from(json['ended_quraan'])
-          : [],
+      ended_quraan:
+          json['ended_quraan'] != null ? List.from(json['ended_quraan']) : [],
       // ◀️ تعديل: اقرأ من 'job' بدلاً من 'job_name'
-      job_name: json['job'], 
+      job_name: json['job'],
       family_status: json['family_status'],
       // ◀️ تعديل: اقرأ من 'address' وضعه في 'region'
-      region: json['address'], 
+      region: json['address'],
     );
   }
 }
-
 
 class reciveLatest {
   List<dynamic>? quran = [];
@@ -99,7 +97,7 @@ class reciveLatest {
   // ✅ دالة مساعدة لتجميع البيانات من 'ghaiban' و 'nazaran'
   List<dynamic> _flattenAndCombine(String? jsonString) {
     if (jsonString == null || jsonString.isEmpty) return [];
-    
+
     try {
       final Map<String, dynamic> data = jsonDecode(jsonString);
       final List<dynamic> ghaibanItems = data['ghaiban'] ?? [];
@@ -122,7 +120,7 @@ class reciveLatest {
           combinedList.add(item);
         }
       }
-      
+
       return combinedList;
     } catch (e) {
       // في حال كان الـ JSON بصيغة قديمة (مجرد قائمة)
@@ -137,27 +135,29 @@ class reciveLatest {
   // ✅ تعديل: التحويل من JSON إلى كائن مع فهم البنية الجديدة
   reciveLatest.fromJson(Map<String, dynamic> json) {
     quran = _flattenAndCombine(json['quran']);
-    hadith = json['hadith'] == null ? [] : jsonDecode(json['hadith']); // افترضنا أن الحديث لا يزال كما هو
+    hadith = json['hadith'] == null
+        ? []
+        : jsonDecode(json['hadith']); // افترضنا أن الحديث لا يزال كما هو
     quranHomework = _flattenAndCombine(json['q_homework']);
     hadithHomework =
         json['h_homework'] == null ? [] : jsonDecode(json['h_homework']);
-    activities = json['activities'] == null ? [] : jsonDecode(json['activities']);
+    activities =
+        json['activities'] == null ? [] : jsonDecode(json['activities']);
     createdAt = json['updated_at'] ?? json['created_at'];
 
-
-    note = (json['note'] == null || json['note'].isEmpty )
-        ?   note = ''
+    note = (json['note'] == null || json['note'].isEmpty)
+        ? note = ''
         : jsonDecode(json['note'])['note'];
-    LPoints =
-        json['note'] == null ? "0" : jsonDecode(json['note'])['LPoints'];
+    LPoints = json['note'] == null ? "0" : jsonDecode(json['note'])['LPoints'];
   }
 
   // ✅ تعديل: التحويل من كائن إلى JSON (للتخزين في الكاش) بشكل صحيح
   Map<String, dynamic> toJson() {
     // دالة مساعدة لإعادة بناء الهيكل المتداخل
     String reconstructNestedJson(List<dynamic>? items) {
-      if (items == null || items.isEmpty) return '{"ghaiban": [], "nazaran": []}';
-      
+      if (items == null || items.isEmpty)
+        return '{"ghaiban": [], "nazaran": []}';
+
       Map<String, List<dynamic>> sorted = {'ghaiban': [], 'nazaran': []};
       for (var item in items) {
         if (item is Map<String, dynamic>) {
@@ -225,6 +225,33 @@ class WantingCheckBox {
 
   WantingCheckBox({required this.checked, required this.id});
 }
+
+class HalakaRank {
+  final int id;
+  String halaka_name;
+  final int teacher_id;
+  final String teacher_name;
+  final int students_count;
+
+  HalakaRank({
+    required this.id,
+    required this.halaka_name,
+    required this.teacher_id,
+    required this.teacher_name,
+    required this.students_count,
+  });
+
+  factory HalakaRank.fromJson(Map<String, dynamic> json) {
+    return HalakaRank(
+      id: json['id'] as int? ?? 0,
+      halaka_name: json['halaka_name']?.toString() ?? '',
+      teacher_id: json['teacher_id'] as int? ?? 0,
+      teacher_name: json['teacher_name']?.toString() ?? '',
+      students_count: json['students_count'] as int? ?? 0,
+    );
+  }
+}
+
 class OneUserRank {
   final int user_id;
   final String user_name;
@@ -258,7 +285,7 @@ class OneUserRank {
       user_name: (json['user_name'] ?? '').toString(),
       points: _parseInt(json['points']),
       // ✅ استقبال البيانات الجديدة مع قيم افتراضية لمنع الأخطاء
-      missingDays: _parseInt(json['missing_days']), 
+      missingDays: _parseInt(json['missing_days']),
       lastAttendanceStatus: json['last_attendance_status'] ?? 'present',
     );
   }
@@ -270,10 +297,12 @@ class OneUserRank {
       'user_name': user_name,
       'points': points,
       'missing_days': missingDays, // ✅ تمت الإضافة للحفظ في الكاش
-      'last_attendance_status': lastAttendanceStatus, // ✅ تمت الإضافة للحفظ في الكاش
+      'last_attendance_status':
+          lastAttendanceStatus, // ✅ تمت الإضافة للحفظ في الكاش
     };
   }
 }
+
 class Points {
   final int q_points;
   final int h_points;
@@ -364,7 +393,7 @@ class endedSurahToSend extends Notification {
     int? to,
     int? mark,
     int? point,
-    String?type,
+    String? type,
   }) {
     return endedSurahToSend(
       num: num ?? this.num,
@@ -381,7 +410,7 @@ class homeworkSurahToSend extends Notification {
   int num;
   int from;
   int to;
-String type; 
+  String type;
   homeworkSurahToSend({
     required this.num,
     required this.from,
@@ -400,7 +429,7 @@ String type;
     int? num,
     int? from,
     int? to,
-    String?type, 
+    String? type,
   }) {
     return homeworkSurahToSend(
       num: num ?? this.num,
@@ -410,7 +439,6 @@ String type;
     );
   }
 }
-
 
 class homeWorkSorah extends Notification {
   final int num;
@@ -449,7 +477,6 @@ class Hadith {
   Map<String, dynamic> toJson() =>
       {'id': id, 'from': from, 'to': to, 'mark': mark, 'points': points};
 }
-
 
 class Activities {
   String details;

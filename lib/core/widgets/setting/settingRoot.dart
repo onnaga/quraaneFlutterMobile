@@ -42,7 +42,7 @@ class settingRoot extends StatelessWidget {
             trailing: Switch(
               value: themeProvider.isDarkMode,
               onChanged: (_) => context.read<ThemeProvider>().toggleTheme(),
-              activeColor: theme.colorScheme.primary,
+              activeThumbColor: theme.colorScheme.primary,
             ),
           ),
           _buildSettingCard(
@@ -115,13 +115,15 @@ class settingRoot extends StatelessWidget {
             color: textColor ?? theme.textTheme.bodyLarge?.color,
           ),
         ),
-        trailing:
-            trailing ?? const Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 18),
+        trailing: trailing ??
+            const Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 18),
         onTap: onTap,
       ),
     );
   }
-}Future<void> logoutFunction(BuildContext context, User user) async {
+}
+
+Future<void> logoutFunction(BuildContext context, User user) async {
   // 1. امسح SharedPreferences
   final prefs = await SharedPreferences.getInstance();
   await prefs.clear();
@@ -137,7 +139,8 @@ class settingRoot extends StatelessWidget {
   daoraState.setDaoraId(0); // لا حاجة لـ await هنا لأنها ليست Future
 
   // 4. امسح الإشعارات
-  final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
+  final notificationProvider =
+      Provider.of<NotificationProvider>(context, listen: false);
   notificationProvider.clear();
 
   // 5. ارجع لشاشة تسجيل الدخول واحذف كل الراوتات السابقة

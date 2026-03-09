@@ -53,7 +53,8 @@ class _AddAdminsScreenState extends State<AddAdminsScreen> {
             return const Center(child: ModernLoader());
           }
           if (snapshot.hasError) {
-            return Center(child: Text('خطأ في تحميل البيانات: ${snapshot.error}'));
+            return Center(
+                child: Text('خطأ في تحميل البيانات: ${snapshot.error}'));
           }
 
           final suggestions = snapshot.data ?? {'jobs': [], 'areas': []};
@@ -79,27 +80,31 @@ class _AddAdminsScreenState extends State<AddAdminsScreen> {
                           const SizedBox(height: 30),
                           // الحقول الأخرى تبقى كما هي
                           TextFormField(
-                            decoration: _inputDecoration('الاسم الثلاثي', Icons.person),
+                            decoration:
+                                _inputDecoration('الاسم الثلاثي', Icons.person),
                             onSaved: (String? value) => username = value,
                             validator: usernameValidator,
                           ),
                           const SizedBox(height: 20),
                           TextFormField(
                             obscureText: true,
-                            decoration: _inputDecoration('كلمة المرور', Icons.lock_outline),
+                            decoration: _inputDecoration(
+                                'كلمة المرور', Icons.lock_outline),
                             onSaved: (String? value) => password = value,
                             validator: passwordValidator,
                           ),
                           const SizedBox(height: 20),
                           DropdownButtonFormField<String>(
-                            decoration: _inputDecoration('اختر الصلاحية', Icons.account_tree),
-                            value: items[1],
+                            decoration: _inputDecoration(
+                                'اختر الصلاحية', Icons.account_tree),
+                            initialValue: items[1],
                             onChanged: (String? value) {
-                              privilegeValue = value == 'استاذ حلقة' ? "2" : "3";
+                              privilegeValue =
+                                  value == 'استاذ حلقة' ? "2" : "3";
                             },
                             validator: privilegeValidator,
-                            items: items
-                                .map<DropdownMenuItem<String>>((String dropdownvalue) {
+                            items: items.map<DropdownMenuItem<String>>(
+                                (String dropdownvalue) {
                               return DropdownMenuItem<String>(
                                 value: dropdownvalue,
                                 child: Center(
@@ -112,10 +117,11 @@ class _AddAdminsScreenState extends State<AddAdminsScreen> {
                             }).toList(),
                           ),
                           const SizedBox(height: 20),
-                          
+
                           // ✅ ============= بداية التعديل: حقل الوظيفة =============
                           Autocomplete<String>(
-                            optionsBuilder: (TextEditingValue textEditingValue) {
+                            optionsBuilder:
+                                (TextEditingValue textEditingValue) {
                               if (textEditingValue.text == '') {
                                 return const Iterable<String>.empty();
                               }
@@ -139,8 +145,11 @@ class _AddAdminsScreenState extends State<AddAdminsScreen> {
                                   _jobController.text = value;
                                 },
                                 validator: (val) =>
-                                    val == null || val.trim().isEmpty ? "الوظيفة مطلوبة" : null,
-                                decoration: _inputDecoration('الوظيفة', Icons.work),
+                                    val == null || val.trim().isEmpty
+                                        ? "الوظيفة مطلوبة"
+                                        : null,
+                                decoration:
+                                    _inputDecoration('الوظيفة', Icons.work),
                               );
                             },
                           ),
@@ -149,7 +158,8 @@ class _AddAdminsScreenState extends State<AddAdminsScreen> {
 
                           // ✅ ============= بداية التعديل: حقل العنوان =============
                           Autocomplete<String>(
-                            optionsBuilder: (TextEditingValue textEditingValue) {
+                            optionsBuilder:
+                                (TextEditingValue textEditingValue) {
                               if (textEditingValue.text.isEmpty) {
                                 return const Iterable<String>.empty();
                               }
@@ -172,8 +182,11 @@ class _AddAdminsScreenState extends State<AddAdminsScreen> {
                                   _addressController.text = value;
                                 },
                                 validator: (val) =>
-                                    val == null || val.trim().isEmpty ? "العنوان مطلوب" : null,
-                                decoration: _inputDecoration('العنوان', Icons.home),
+                                    val == null || val.trim().isEmpty
+                                        ? "العنوان مطلوب"
+                                        : null,
+                                decoration:
+                                    _inputDecoration('العنوان', Icons.home),
                               );
                             },
                           ),
@@ -181,7 +194,9 @@ class _AddAdminsScreenState extends State<AddAdminsScreen> {
                           const SizedBox(height: 20),
 
                           TextFormField(
-                            decoration: _inputDecoration('الحالة العائلية (اختياري)', Icons.family_restroom),
+                            decoration: _inputDecoration(
+                                'الحالة العائلية (اختياري)',
+                                Icons.family_restroom),
                             onSaved: (v) => familyStatus = v?.trim(),
                           ),
                           const SizedBox(height: 30),
@@ -245,7 +260,8 @@ class _AddAdminsScreenState extends State<AddAdminsScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final int? daoraId = Provider.of<Daorastate>(context, listen: false).currentDaoraId;
+      final int? daoraId =
+          Provider.of<Daorastate>(context, listen: false).currentDaoraId;
       final User user = Provider.of<User>(context, listen: false);
 
       // ✅ نقرأ القيم النهائية مباشرة من الـ Controllers
@@ -266,7 +282,8 @@ class _AddAdminsScreenState extends State<AddAdminsScreen> {
       }
     } catch (e) {
       if (!context.mounted) return;
-      showStyledSnackBar(context, message: e.toString().replaceFirst("Exception: ", ""), isError: true);
+      showStyledSnackBar(context,
+          message: e.toString().replaceFirst("Exception: ", ""), isError: true);
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);

@@ -23,7 +23,9 @@ import 'package:provider/provider.dart';
 import 'package:masjed/core/widgets/pulse_loader.dart';
 
 enum _GlobalViewType { allStudents, halaqaList, specificHalaqa }
- enum _SortBy { points, absence }
+
+enum _SortBy { points, absence }
+
 class ListContentForRankingPage extends StatefulWidget {
   final bool global;
 
@@ -54,9 +56,6 @@ class _ListContentForRankingPageState extends State<ListContentForRankingPage>
   // لتتبع وضع العرض في الواجهة الشاملة (المسجد)
   _GlobalViewType _globalView = _GlobalViewType.allStudents; // الوضع الافتراضي
 
-  // <teacher_id, teacher_name> :لتخزين قائمة الحلقات الفريدة
-  final Map<int, String> _halaqasMap = {};
-
   // لتخزين بيانات الحلقة المختارة حالياً
   int? _selectedHalaqaTeacherId;
   String? _selectedHalaqaTeacherName;
@@ -66,7 +65,7 @@ class _ListContentForRankingPageState extends State<ListContentForRankingPage>
   // ✅ --- نهاية الإضافات ---
 
   // ✅ --- بداية الإضافات (لفرز الترتيب) ---
- 
+
   _SortBy _currentSort = _SortBy.points; // الافتراضي
   // ✅ --- نهاية الإضافات ---
 
@@ -130,7 +129,8 @@ class _ListContentForRankingPageState extends State<ListContentForRankingPage>
       await _loadRanksFromCache();
     }
   }
-@override
+
+  @override
   Widget build(BuildContext context) {
     super.build(context);
     sizeConfig().init(context); // التأكد من تهيئة القياسات
@@ -146,7 +146,8 @@ class _ListContentForRankingPageState extends State<ListContentForRankingPage>
               if (isLoading)
                 const Center(child: RealisticAtomLoader(size: 70))
               // ✅ تعديل: التحقق من القائمة الصحيحة بناءً على وضع العرض
-              else if (reankMenu.isEmpty) // 'reankMenu' هي القائمة المصدر دائماً
+              else if (reankMenu
+                  .isEmpty) // 'reankMenu' هي القائمة المصدر دائماً
                 const Center(
                   child: Text(
                     'لا يوجد طلاب لعرضهم',
@@ -166,7 +167,8 @@ class _ListContentForRankingPageState extends State<ListContentForRankingPage>
 
                     // ✅ --- بداية الإضافة: إضافة أزرار الفرز ---
                     // لا نعرض الفرز إذا كنا في وضع "قائمة الحلقات"
-                    if (!widget.global || _globalView != _GlobalViewType.halaqaList)
+                    if (!widget.global ||
+                        _globalView != _GlobalViewType.halaqaList)
                       _buildSortToggle(),
                     // ✅ --- نهاية الإضافة ---
 
@@ -182,7 +184,7 @@ class _ListContentForRankingPageState extends State<ListContentForRankingPage>
                         // ✅ --- بداية التعديل: تحديد عدد العناصر ديناميكياً ---
                         itemCount: (widget.global &&
                                 _globalView == _GlobalViewType.halaqaList)
-                            ? _halaqasMap.length // عدد الحلقات
+                            ? profile.RankHalakas?.length ?? 0 // عدد الحلقات
                             : (specificUser == null
                                 ? _displayList.length
                                 : 1), // عدد الطلاب (العادي أو البحث)
@@ -191,9 +193,8 @@ class _ListContentForRankingPageState extends State<ListContentForRankingPage>
                           // --- 1. بناء قائمة الحلقات ---
                           if (widget.global &&
                               _globalView == _GlobalViewType.halaqaList) {
-                            final teacherId = _halaqasMap.keys.elementAt(i);
-                            final teacherName = _halaqasMap[teacherId]!;
-                            return _buildHalaqaListItem(teacherId, teacherName);
+                            final halaka = profile.RankHalakas![i];
+                            return _buildHalaqaListItem(halaka, user, profile);
                           }
 
                           // --- 2. بناء قائمة الطلاب (الكل أو حلقة معينة) ---
@@ -201,14 +202,16 @@ class _ListContentForRankingPageState extends State<ListContentForRankingPage>
                           final int rank;
 
                           if (specificUser == null) {
-                            if (i >= _displayList.length)
+                            if (i >= _displayList.length) {
                               return const SizedBox.shrink(); // حماية
+                            }
                             item = _displayList[i];
                             // البحث عن الترتيب الأصلي في القائمة الكاملة
                             rank = reankMenu.indexOf(item);
                           } else {
                             item = specificUser!;
-                            rank = indexOf; // 'indexOf' هو الترتيب الأصلي من 'reankMenu'
+                            rank =
+                                indexOf; // 'indexOf' هو الترتيب الأصلي من 'reankMenu'
                           }
 
                           // استخدام 'i' كترتيب احتياطي إذا لم يتم العثور عليه
@@ -241,10 +244,7 @@ class _ListContentForRankingPageState extends State<ListContentForRankingPage>
       },
     );
   }
-  
-  
-  
-  
+
   /// ✅ دالة جديدة ومحسنة لبناء شريط الأزرار السفلي بطريقة متجاوبة
   Widget _buildBottomActionButtons(Profile profile, bool isOnline) {
     final userProvider = Provider.of<User>(context, listen: false);
@@ -405,7 +405,7 @@ class _ListContentForRankingPageState extends State<ListContentForRankingPage>
   }
   // ✅ --- نهاية الدالة المساعدة الجديدة ---
 
-/// تحديث القائمة المعروضة `_displayList` بناءً على وضع العرض والفرز
+  /// تحديث القائمة المعروضة `_displayList` بناءً على وضع العرض والفرز
   void _updateDisplayList() {
     // إعادة تعيين البحث عند تغيير العرض
     specificUser = null;
@@ -454,6 +454,7 @@ class _ListContentForRankingPageState extends State<ListContentForRankingPage>
       });
     }
   }
+
   Future<void> _generateAndCopyReport() async {
     // إظهار مؤشر تحميل
     showDialog(
@@ -609,7 +610,8 @@ class _ListContentForRankingPageState extends State<ListContentForRankingPage>
     }
     // print("Background caching finished.");
   }
-Future<void> UpdateScreen(BuildContext context, Profile profile) async {
+
+  Future<void> UpdateScreen(BuildContext context, Profile profile) async {
     if (!mounted) return;
 
     setState(() {
@@ -636,35 +638,6 @@ Future<void> UpdateScreen(BuildContext context, Profile profile) async {
         setState(() {
           // ✅ reankMenu هي القائمة "المصدر" (Master List) الكاملة دائماً
           reankMenu = newRankMenu;
-
-          // ✅ --- بداية التعديل: تجميع الحلقات ---
-          if (widget.global) {
-            _halaqasMap.clear();
-
-            // ✅ --- تصحيح الخطأ 1 ---
-            // بما أن teacher_id هو int وليس int?، لم نعد بحاجة لـ .where() أو .cast()
-            Set<int> teacherIds =
-                newRankMenu.map((s) => s.teacher_id).toSet();
-
-            // جلب اسم الأستاذ لكل حلقة
-            for (int teacherId in teacherIds) {
-              // ✅ --- تصحيح الخطأ 2 و 3 ---
-              // استخدام try-catch للبحث عن الأستاذ بأمان
-              // هذا يضمن أن teacherUser هو OneUserRank? (قابل لـ null)
-              OneUserRank? teacherUser;
-              try {
-                teacherUser =
-                    newRankMenu.firstWhere((u) => u.user_id == teacherId);
-              } catch (e) {
-                teacherUser = null; // لم يتم العثور عليه
-              }
-
-              // الآن، `?.` يعمل بشكل صحيح لأن teacherUser هو nullable
-              _halaqasMap[teacherId] =
-                  teacherUser?.user_name ?? 'حلقة (ID: $teacherId)';
-            }
-          }
-          // ✅ --- نهاية التعديل ---
 
           // ✅ بناء CheckBox للغياب بناءً على القائمة الكاملة
           WantingStudentsCheckBox = newRankMenu.map((userRank) {
@@ -707,7 +680,8 @@ Future<void> UpdateScreen(BuildContext context, Profile profile) async {
       }
     }
   }
-    Future<void> _submitAbsences(Profile profile) async {
+
+  Future<void> _submitAbsences(Profile profile) async {
     // --- بداية: إضافة كود التأكيد ---
     if (widget.global) {
       // 1. اعرض نافذة التأكيد وانتظر النتيجة
@@ -732,7 +706,6 @@ Future<void> UpdateScreen(BuildContext context, Profile profile) async {
               ),
               // زر التأكيد (استخدمنا FilledButton للتمييز)
               FilledButton(
-                child: const Text('نعم، إرسال للجميع'),
                 style: FilledButton.styleFrom(
                   backgroundColor: Colors.red, // للتأكيد على خطورة الإجراء
                 ),
@@ -740,6 +713,7 @@ Future<void> UpdateScreen(BuildContext context, Profile profile) async {
                   // إغلاق النافذة وإرجاع (true)
                   Navigator.pop(dialogContext, true);
                 },
+                child: const Text('نعم، إرسال للجميع'),
               ),
             ],
           );
@@ -1179,9 +1153,6 @@ Future<void> UpdateScreen(BuildContext context, Profile profile) async {
     });
   }
 
-
-
-
   /// بناء أزرار التبديل بين "كل الطلاب" و "الحلقات"
   Widget _buildGlobalViewToggle() {
     return Padding(
@@ -1222,7 +1193,15 @@ Future<void> UpdateScreen(BuildContext context, Profile profile) async {
   }
 
   /// بناء عنصر القائمة الخاص بـ "الحلقة"
-  Widget _buildHalaqaListItem(int teacherId, String teacherName) {
+  Widget _buildHalaqaListItem(HalakaRank halaka, User user, Profile profile) {
+    String halakaNameLabel = halaka.halaka_name.isNotEmpty
+        ? halaka.halaka_name
+        : 'حلقة ${halaka.teacher_name}';
+
+    // Check if user has permission to edit
+    bool canEdit = user.privilege == 3 ||
+        (user.privilege == 2 && user.id == halaka.teacher_id);
+
     return Card(
       elevation: 1.5,
       margin: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 10.0),
@@ -1230,12 +1209,11 @@ Future<void> UpdateScreen(BuildContext context, Profile profile) async {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
       child: InkWell(
         onTap: () {
-          // 🔘 عند الضغط: انتقل إلى عرض طلاب هذه الحلقة
           setState(() {
             _globalView = _GlobalViewType.specificHalaqa;
-            _selectedHalaqaTeacherId = teacherId;
-            _selectedHalaqaTeacherName = teacherName;
-            _updateDisplayList(); // تحديث القائمة لعرض طلاب الحلقة فقط
+            _selectedHalaqaTeacherId = halaka.teacher_id;
+            _selectedHalaqaTeacherName = halakaNameLabel;
+            _updateDisplayList();
           });
         },
         child: Padding(
@@ -1245,20 +1223,288 @@ Future<void> UpdateScreen(BuildContext context, Profile profile) async {
               const Icon(Icons.group_work, color: Colors.green, size: 28),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  teacherName,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w600,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      halakaNameLabel,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'المشرف:${halaka.teacher_name}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'عدد الطلاب: ${halaka.students_count}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const Icon(Icons.arrow_forward_ios,
-                  color: Colors.grey, size: 16),
+              if (user.privilege == 3)
+                IconButton(
+                  icon: const Icon(Icons.manage_accounts_outlined,
+                      color: Colors.orange, size: 20),
+                  tooltip: 'تغيير مشّرف الحلقة',
+                  onPressed: () =>
+                      _showChangeHalakaTeacherDialog(halaka, profile),
+                ),
+              if (user.privilege == 3)
+                IconButton(
+                  icon: const Icon(Icons.delete_outline,
+                      color: Colors.red, size: 20),
+                  tooltip: 'حذف الحلقة',
+                  onPressed: () => _showDeleteHalakaDialog(halaka, profile),
+                ),
+              if (canEdit)
+                IconButton(
+                  icon: const Icon(Icons.edit, color: Colors.blue, size: 20),
+                  tooltip: 'تعديل اسم الحلقة',
+                  onPressed: () => _showEditHalakaNameDialog(halaka, profile),
+                ),
+              if (!canEdit && user.privilege != 3)
+                const Icon(Icons.arrow_forward_ios,
+                    color: Colors.grey, size: 16),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  void _showEditHalakaNameDialog(HalakaRank halaka, Profile profile) {
+    TextEditingController nameController =
+        TextEditingController(text: halaka.halaka_name);
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('تعديل اسم الحلقة'),
+          content: TextField(
+            controller: nameController,
+            decoration: const InputDecoration(
+              hintText: 'أدخل اسم الحلقة الجديد',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('إلغاء'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                if (nameController.text.trim().isEmpty) return;
+                bool success = await profile.update_halaka_name(
+                    halaka.id, nameController.text.trim());
+                if (success) {
+                  setState(() {});
+                  if (mounted) Navigator.pop(context);
+                } else {
+                  if (mounted)
+                    showStyledSnackBar(context,
+                        message: 'فشل تعديل الاسم', isError: true);
+                }
+              },
+              child: const Text('حفظ'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showDeleteHalakaDialog(HalakaRank halaka, Profile profile) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title:
+              const Text('حذف الحلقة ⚠️', style: TextStyle(color: Colors.red)),
+          content: const Text(
+            'هل أنت متأكد من حذف هذه الحلقة نهائياً؟\n\n'
+            'سيصبح جميع الطلاب المندرجين تحتها بدون أستاذ وسيتم تحويلهم إلى قائمة "الطلاب غير المسندين".',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('إلغاء'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: () async {
+                bool success = await profile.deleteHalaka(halaka.id);
+                if (success) {
+                  if (mounted) Navigator.pop(dialogContext);
+                  if (mounted) {
+                    showStyledSnackBar(context, message: 'تم حذف الحلقة بنجاح');
+                    UpdateScreen(context, profile);
+                  }
+                } else {
+                  if (mounted) {
+                    showStyledSnackBar(context,
+                        message: 'فشل حذف الحلقة', isError: true);
+                  }
+                }
+              },
+              child: const Text('حذف'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showChangeHalakaTeacherDialog(HalakaRank halaka, Profile profile) {
+    int? selectedTeacherId;
+    List<dynamic>? teachersList;
+    bool isLoading = true;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(builder: (builderContext, setDialogState) {
+          if (isLoading && teachersList == null) {
+            final int? daoraId =
+                Provider.of<Daorastate>(context, listen: false).currentDaoraId;
+            profile.get_teachers(daoraId).then((teachers) {
+              if (mounted) {
+                setDialogState(() {
+                  teachersList = teachers;
+                  isLoading = false;
+                });
+              }
+            }).catchError((e) {
+              if (mounted) {
+                setDialogState(() {
+                  isLoading = false;
+                });
+                showStyledSnackBar(context,
+                    message: 'فشل جلب الأساتذة', isError: true);
+              }
+            });
+          }
+
+          return AlertDialog(
+            title: const Text('تغيير أستاذ الحلقة'),
+            content: SizedBox(
+              height: 100, // Explicit height
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : DropdownButtonFormField<int>(
+                      value: selectedTeacherId,
+                      hint: const Text('اختر أستاذاً جديداً'),
+                      isExpanded: true,
+                      items: teachersList
+                          ?.where((t) => t['id'] != halaka.teacher_id)
+                          .map<DropdownMenuItem<int>>((t) {
+                        String displayName = t['name'];
+                        if (t['has_halaka'] == true) {
+                          displayName +=
+                              ' (عنده حلقة بـ ${t['halaka_students_count']} طالب)';
+                        }
+                        return DropdownMenuItem<int>(
+                          value: t['id'],
+                          child: Text(
+                            displayName,
+                            style: TextStyle(
+                              color:
+                                  t['has_halaka'] == true ? Colors.red : null,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (val) async {
+                        if (val == null) return;
+
+                        final selectedTeacher = teachersList?.firstWhere(
+                            (t) => t['id'] == val,
+                            orElse: () => null);
+                        if (selectedTeacher != null &&
+                            selectedTeacher['has_halaka'] == true) {
+                          // Show confirmation dialog before allowing the selection
+                          bool? confirm = await showDialog<bool>(
+                            context: builderContext,
+                            builder: (BuildContext context) {
+                              return AlertDialog(
+                                title: const Text('تأكيد الدمج ⚠️'),
+                                content: Text(
+                                  'هذا الأستاذ لديه حلقة بالفعل.\nهل أنت متأكد من أنك تريد دمج طلاب هذه الحلقة مع حلقته الحالية؟',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(context).pop(false),
+                                    child: const Text('إلغاء'),
+                                  ),
+                                  FilledButton(
+                                    onPressed: () =>
+                                        Navigator.of(context).pop(true),
+                                    style: FilledButton.styleFrom(
+                                        backgroundColor: Colors.red),
+                                    child: const Text('نعم، دمج'),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+
+                          if (confirm != true) {
+                            // User cancelled, reset the dropdown
+                            setDialogState(() {
+                              selectedTeacherId = null;
+                            });
+                            return;
+                          }
+                        }
+
+                        setDialogState(() {
+                          selectedTeacherId = val;
+                        });
+                      },
+                    ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('إلغاء'),
+              ),
+              FilledButton(
+                onPressed: isLoading || selectedTeacherId == null
+                    ? null
+                    : () async {
+                        bool success = await profile.change_halaka_teacher(
+                            halaka.id, selectedTeacherId!);
+                        if (success) {
+                          if (mounted) Navigator.pop(dialogContext);
+                          if (mounted) {
+                            showStyledSnackBar(context,
+                                message: 'تم أتمام العملية بنجاح 🎉');
+                            UpdateScreen(context, profile);
+                          }
+                        } else {
+                          if (mounted) {
+                            showStyledSnackBar(context,
+                                message: 'فشل إتمام العملية', isError: true);
+                          }
+                        }
+                      },
+                child: const Text('حفظ'),
+              ),
+            ],
+          );
+        });
+      },
     );
   }
 
@@ -1304,5 +1550,4 @@ Future<void> UpdateScreen(BuildContext context, Profile profile) async {
     );
   }
   // ✅ --- نهاية الدوال المساعدة الجديدة ---
-
 }

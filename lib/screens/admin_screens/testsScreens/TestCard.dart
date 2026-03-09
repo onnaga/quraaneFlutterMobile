@@ -30,7 +30,6 @@ void _handleApiCall(
       }
       showStyledSnackBar(context, message: successMessage, isError: false);
     } else {
-      
       showStyledSnackBar(context, message: errorMessage, isError: true);
     }
   });
@@ -218,7 +217,8 @@ class _TestCardState extends State<TestCard> {
 
             Navigator.of(context).push(MaterialPageRoute(
               builder: (context) => UserTestListViewAccepters(
-                dataFromApi: accepters, // تمرير البيانات المستلمة مباشرة
+                initialData: accepters,
+                testId: widget.data.id,
               ),
             ));
           } catch (e) {

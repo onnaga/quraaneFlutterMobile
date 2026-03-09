@@ -10,7 +10,7 @@ android {
     namespace = "com.example.masjed"
     // ✅ تأكد من أن compileSdk هو 34 أو أحدث
     compileSdk = 35
-    ndkVersion = flutter.ndkVersion
+    ndkVersion "25.2.9519653"
 
     compileOptions {
         // ✅ تحديد توافقية الكود مع Java 17، وهو المطلوب للإصدارات الحديثة من Android Gradle Plugin
@@ -25,7 +25,7 @@ android {
     defaultConfig {
         applicationId = "com.example.masjed"
         // ✅ أقل إصدار أندرويد يدعمه التطبيق (متوافق مع متطلبات Firebase)
-        minSdk = 23
+        minSdkVersion = flutter.minSdkVersion
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"

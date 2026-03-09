@@ -93,7 +93,7 @@ class _changeDetailsState extends State<changeDetails> {
 
                   // حقل العمر (بدون تغيير)
                   DropdownButtonFormField<int>(
-                    value: age,
+                    initialValue: age,
                     onChanged: (int? v) => setState(() => age = v),
                     validator: ageValidator,
                     decoration: _inputDecoration('العمر', Icons.calendar_today)
@@ -182,8 +182,7 @@ class _changeDetailsState extends State<changeDetails> {
                         validator: (val) => val == null || val.trim().isEmpty
                             ? "العنوان مطلوب"
                             : null,
-                        decoration:
-                            _inputDecoration('مكان السكن', Icons.home),
+                        decoration: _inputDecoration('مكان السكن', Icons.home),
                       );
                     },
                   ),

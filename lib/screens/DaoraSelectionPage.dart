@@ -26,27 +26,30 @@ class _DaoraSelectionPageState extends State<DaoraSelectionPage> {
     super.initState();
     fetchDaoras();
   }
-Future<void> fetchDaoras() async {
-  final daorastate = Provider.of<Daorastate>(context, listen: false);
-  try {
-    final list = await daorastate.getAllDaoras();
-    if (mounted) { // التحقق من أن الواجهة ما زالت موجودة
-      setState(() {
-        daoras = list;
-        loading = false;
-      });
-    }
-  } catch (e) {
-    // التقط الخطأ واعرض SnackBar هنا
-    if (mounted) {
-      showStyledSnackBar(context,
-          message: e.toString().replaceAll("Exception: ", ""), isError: true);
-      setState(() {
-        loading = false; // لا تنس إيقاف التحميل عند حدوث خطأ
-      });
+
+  Future<void> fetchDaoras() async {
+    final daorastate = Provider.of<Daorastate>(context, listen: false);
+    try {
+      final list = await daorastate.getAllDaoras();
+      if (mounted) {
+        // التحقق من أن الواجهة ما زالت موجودة
+        setState(() {
+          daoras = list;
+          loading = false;
+        });
+      }
+    } catch (e) {
+      // التقط الخطأ واعرض SnackBar هنا
+      if (mounted) {
+        showStyledSnackBar(context,
+            message: e.toString().replaceAll("Exception: ", ""), isError: true);
+        setState(() {
+          loading = false; // لا تنس إيقاف التحميل عند حدوث خطأ
+        });
+      }
     }
   }
-}
+
   bool _canShowDaora(Map<String, dynamic> daora, int? privilege) {
     if (privilege == null) return true; // غير مسجل → كل الدورات
     if (privilege == 4) return true; // مدير → كل الدورات
@@ -70,43 +73,44 @@ Future<void> fetchDaoras() async {
         ),
       );
     } else if (privilege == 10) {
-  // حالة تغيير الدورة
-  buttons.add(
-    ElevatedButton(
-      style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-      onPressed: () async {
-        final user = Provider.of<User>(context, listen: false);
-        final daoraState = Provider.of<Daorastate>(context, listen: false);
+      // حالة تغيير الدورة
+      buttons.add(
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+          onPressed: () async {
+            final user = Provider.of<User>(context, listen: false);
+            final daoraState = Provider.of<Daorastate>(context, listen: false);
 
-        // 1. استدعاء التابع بدون context وانتظار النتيجة
-        final result = await daoraState.changeMyDaora(user.id!, daora["daora_id"]);
+            // 1. استدعاء التابع بدون context وانتظار النتيجة
+            final result =
+                await daoraState.changeMyDaora(user.id!, daora["daora_id"]);
 
-        // 2. التحقق من أن الواجهة ما زالت موجودة
-        if (!context.mounted) return;
+            // 2. التحقق من أن الواجهة ما زالت موجودة
+            if (!context.mounted) return;
 
-        // 3. التعامل مع النتيجة
-        if (result['success'] == true) {
-          // في حالة النجاح، قم بتحديث privilege وانتقل
-          Provider.of<User>(context, listen: false).privilege = 1;
+            // 3. التعامل مع النتيجة
+            if (result['success'] == true) {
+              // في حالة النجاح، قم بتحديث privilege وانتقل
+              Provider.of<User>(context, listen: false).privilege = 1;
 
-          showStyledSnackBar(context,
-              message: "تم تغيير الدورة بنجاح ✅", isError: false);
+              showStyledSnackBar(context,
+                  message: "تم تغيير الدورة بنجاح ✅", isError: false);
 
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const Redirect()),
-            (route) => false,
-          );
-        } else {
-          // في حالة الفشل، اعرض رسالة الخطأ
-          showStyledSnackBar(context,
-              message: result['message'], isError: true);
-        }
-      },
-      child: const Text("تغيير الدورة"),
-    ),
-  );
-} else {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => const Redirect()),
+                (route) => false,
+              );
+            } else {
+              // في حالة الفشل، اعرض رسالة الخطأ
+              showStyledSnackBar(context,
+                  message: result['message'], isError: true);
+            }
+          },
+          child: const Text("تغيير الدورة"),
+        ),
+      );
+    } else {
       // باقي الحالات → تصفح
       buttons.add(
         ElevatedButton(
@@ -134,8 +138,8 @@ Future<void> fetchDaoras() async {
           style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
           onPressed: () async {
             final daorastate = Provider.of<Daorastate>(context, listen: false);
-            String msg = await daorastate.deleteDaora(
-                daora["daora_id"], user.token);
+            String msg =
+                await daorastate.deleteDaora(daora["daora_id"], user.token);
 
             if (context.mounted) {
               showStyledSnackBar(context, message: msg, isError: false);

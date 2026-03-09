@@ -21,7 +21,8 @@ class _JobsAndAreasScreenState extends State<JobsAndAreasScreen> {
     super.initState();
 
     // استدعاء دالة جلب البيانات عند بدء تشغيل الصفحة
-    _dataFuture = Provider.of<Daorastate>(context, listen: false).getJobsAndAreas(Provider.of<User>(context, listen: false).token);
+    _dataFuture = Provider.of<Daorastate>(context, listen: false)
+        .getJobsAndAreas(Provider.of<User>(context, listen: false).token);
   }
 
   @override
@@ -56,7 +57,7 @@ class _JobsAndAreasScreenState extends State<JobsAndAreasScreen> {
 
               return TabBarView(
                 children: [
-                  _buildList(jobs, "عمل"),    // عرض قائمة الأعمال
+                  _buildList(jobs, "عمل"), // عرض قائمة الأعمال
                   _buildList(areas, "منطقة"), // عرض قائمة المناطق
                 ],
               );
